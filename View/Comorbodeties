@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Co-Morbidities Status</title>
+    <style>
+        /* General Styling */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            align-items: center;
+            height: 270vh; /* Match height to trainee page */
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .form-container {
+            background-color: white;
+            border-radius: 12px;
+            padding: 40px;
+            width: 450px; /* Consistent width */
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* Soft shadow */
+            transition: all 0.3s ease;
+        }
+
+        .form-container:hover {
+            transform: translateY(-10px); /* Slightly lift when hovered */
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2); /* Slightly bigger shadow on hover */
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .form-group input[type="number"],
+        .form-group textarea,
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group select {
+            width: 100%; /* Ensure full width for all inputs */
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            background-color: #f9f9f9;
+            color: #333;
+            transition: border 0.3s;
+            box-sizing: border-box; /* Makes sure padding and width fit nicely */
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #3366ff; /* Blue border on focus */
+        }
+
+        .form-group select {
+            appearance: none; /* Remove default dropdown arrow */
+        }
+
+        /* Button Styling */
+        button {
+            width: 100%; /* Full width button */
+            padding: 15px;
+            background-color: #3366ff;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        button:hover {
+            background-color: #254eda;
+            transform: scale(1.02); /* Slight grow on hover */
+        }
+        
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background-color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        .navbar .logo {
+            color: #3366ff;
+            font-size: 2em;
+            font-weight: 800;
+            text-decoration: none;
+            transition: transform 0.3s;
+        }
+        .navbar .logo:hover {
+            transform: scale(1.1);
+        }
+ 
+        /* Padding to prevent overlap with fixed navbar */
+        .content {
+            padding-top: 175px; /* Increased padding to prevent overlap */
+            padding-bottom: 60px;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+        }
+ 
+        /* Footer */
+        .footer {
+            background-color: #3366ff;
+            color: white;
+            padding-top: 18px;
+            padding-bottom: 18px;
+            padding-left: 610px;
+            padding-right: 610px;
+            text-align: center;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <a href="admin_home.php" class="logo">Bravo</a>
+    <!-- You can add any additional links in the navbar here if needed -->
+</div>
+
+<!-- Content Section -->
+<div class="content">
+    <div class="form-container">
+    <h2>Co-morbedities Status</h2>
+    <div class="functional_status">
+        <form action="#">
+        <h4>Functional Status:</h4>
+          <input type="radio" id="dis" name="Functional_status" value="Disabled">
+          <label for="dis">Disabled</label><br>
+          <input type="radio" id="one_floor" name="Functional_status" value="one_floor">
+          <label for="one_floor">one_floor</label><br>
+          <input type="radio" id="3_floors" name="Functional_status" value="3_floors">
+          <label for="3_floors">3_floors or more</label> </form>
+      
+    </div>
+
+
+    <div class="diabetes">
+        <form action="#">
+        <h4>Diabetes:</h4>
+          <input type="radio" id="yes" name="diabetes" value="yes">
+          <label for="yes">Yes</label><br>
+          <input type="radio" id="no" name="diabetes" value="no">
+          <label for="no">No</label><br>
+<p></p>
+          <label for="habic">Last HABIC:</label>
+          <input type="number" id="habic" name="habic"></form>
+
+    </div>
+
+    <div id="durationDiv">
+      <p></p>
+        <label for="duration">Enter duration:</label>
+        <input type="number" id="duration" name="duration">
+
+        <div class="Treatment">
+            <form action="#">
+            <h4>Treatment:</h4>
+              <input type="radio" id="ins" name="Treatment" value="ins">
+              <label for="ins">Insulin</label><br>
+              <input type="radio" id="life" name="Treatment" value="life">
+              <label for="life">Life Style</label><br>
+              <input type="radio" id="oral" name="Treatment" value="oral">
+              <label for="oral">Oral</label><br>
+              <input type="radio" id="both" name="Treatment" value="both">
+              <label for="both">Both</label><br></form>
+        </div>
+
+
+    </div>
+
+
+    <div class="Haypertension">
+        <form action="#">
+        <h4>Haypertension:</h4>
+          <input type="radio" id="yesh" name="Haypertension" value="yes">
+          <label for="yesh">Yes</label><br>
+          <input type="radio" id="noh" name="Haypertension" value="no">
+          <label for="noh">No</label><br> </form>
+
+          
+    </div>
+
+
+    <div id="treatment_radio">
+        <form action="#">
+            <h4>Treatment:</h4>
+
+        <input type="radio" id="yest" name="Treatment" value="yes">
+          <label for="yest">Yes</label><br>
+          <input type="radio" id="not" name="Treatment" value="no">
+          <label for="not">No</label><br> </form>
+
+
+    </div>
+
+
+    <div class="lipid">
+
+
+        <form action="#">
+            <h4>Lipid Profile:</h4>
+              <input type="radio" id="Hyper" name="Lipid" value="Hyperchloesterilenia">
+              <label for="Hyper">Hyperchloesterilenia</label><br>
+
+              <input type="radio" id="noh" name="Lipid" value="no">
+              <label for="noh">As2ly tamer hena bttktb ezay</label><br>
+
+
+              <input type="radio" id="Both" name="Lipid" value="Both">
+              <label for="Both">Both</label><br>
+
+
+              
+              <input type="radio" id="None" name="Lipid" value="None">
+              <label for="None">None</label><br>
+
+
+            <form action="#">
+            <h4>Treatment:</h4>
+    
+            <input type="radio" id="yesl" name="Treatmentl" value="yes">
+              <label for="yesl">Yes</label><br>
+              <input type="radio" id="nol" name="Treatmentl" value="no">
+              <label for="nol">No</label><br>
+    
+
+
+    </div>
+
+    <div class="reflux">
+        <form action="#">
+        <h4>Reflux:</h4>
+        <input type="radio" id="nor" name="Reflux" value="No">
+        <label for="Hyper">No</label><br>
+
+        <input type="radio" id="notreat" name="Reflux" value="Intermediate_Without_Treatment">
+        <label for="noh">Intermediate Without Treatment</label><br>
+
+
+        <input type="radio" id="treat" name="Reflux" value="Intermediate_With_Treatment">
+        <label for="Both">Intermediate With Treatment</label><br>
+        
+        <input type="radio" id="regular" name="Reflux" value="On_Regular_Treatment">
+        <label for="None">On Regular Treatment</label><br>
+    </form>
+
+    </div>
+<bR>
+
+    <div class="Faty">
+        <h4>Fatty Liver:</h4>
+        <form action="#">
+            <h4>Size:</h4>
+              <input type="radio" id="Mild" name="Lipid" value="Mild">
+              <label for="Mild">Mild</label><br>
+              <input type="radio" id="Moderate" name="Lipid" value="Moderate">
+              <label for="Moderate">Moderate</label><br>
+              <input type="radio" id="Severe" name="Lipid" value="Severe">
+              <label for="Severe">Severe</label><br></form>
+
+            <form action="#">
+            <h4>Liver Enzymes:</h4>
+            <input type="radio" id="elve" name="Liver" value="Elevated">
+              <label for="Elevated">Elevated</label><br>
+              <input type="radio" id="noelve" name="Liver" value="Not Elevated">
+              <label for="Not Elevated">Not Elevated</label><br></form>
+    </div>
+
+    <div class="gynecological">
+        <form action="#">
+            <h4>Menusteral cycle:</h4>
+            <input type="radio" id="Regular" name="Menusteral" value="Regular">
+              <label for="Regular">Regular</label><br>
+              <input type="radio" id="Irregular" name="Menusteral" value="Irregular">
+              <label for="Irregular">Irregular </label><br> </form>
+
+             <form action="#">
+              <h4>Menopause</h4>
+              <input type="radio" id="Yesm" name="Menopause" value="Yes">
+                <label for="Yes">Yes</label><br>
+                <input type="radio" id="Nom" name="Menopause" value="No">
+                <label for="No">No </label><br> </form>
+
+                <form action="#">
+                    <h4>Uterus Removed</h4>
+                    <input type="radio" id="Yesu" name="Uterus" value="Yes">
+                      <label for="Yes">Yes</label><br>
+                      <input type="radio" id="Nou" name="Uterus" value="No">
+                      <label for="No">No </label><br> </form>
+    </div>
+  <div class="fertility">
+    <form action="#">
+        <h4>Fertility</h4>
+        <input type="radio" id="Fertile" name="Fertility" value="Fertile">
+          <label for="Fertile">Fertile</label><br>
+
+          <input type="radio" id="PI" name="Fertility" value="Primary Infertility">
+          <label for="Primary Infertility">Primary Infertility </label><br>
+
+          <input type="radio" id="SI" name="Fertility" value="seceondry Infertility">
+          <label for="seceondry Infertility">seceondry Infertility </label><br>
+
+          <input type="radio" id="NM" name="Fertility" value="Not Married">
+          <label for="Not Married">Not Married </label><br> </form>
+  </div>
+
+  <div class="PCEO">
+
+    <form action="#">
+        <h4>PCEO:</h4>
+        <input type="radio" id="NOp" name="PCEO" value="NO">
+          <label for="NO">NO</label><br>
+
+          <input type="radio" id="YNT" name="PCEO" value="Yes Without Treatment">
+          <label for="Yes Without Treatment">Yes Without Treatment </label><br>
+
+          <input type="radio" id="YWT" name="PCEO" value="Yes With Treatment">
+          <label for="Yes With Treatment">Yes With Treatment </label><br>
+
+          <input type="radio" id="None" name="PCEO" value="None">
+          <label for="None">None </label><br> </form>
+
+  </div>
+  <div class="Smoking">
+    <form action="#">
+        <h4>Smoking:</h4>
+        <input type="radio" id="Smoker" name="Smoking" value="Smoker">
+          <label for="Smoker">Smoker</label><br>
+          <input type="radio" id="EX " name="Smoking" value="EX Smoker">
+          <label for="EX Smoker">EX Smoker </label><br> </form>
+          <input type="radio" id="None_Smoker" name="Smoking" value="None Smoker">
+          <label for="None Smoker">None Smoker </label><br> </form>
+  </div>
+  <div class="Alcoholization">
+    <form action="#">
+        <h4>Alcoholization:</h4>
+        <input type="radio" id="YesAl" name="Alcoholization" value="Yes">
+          <label for="Yes">Yes</label><br>
+          <input type="radio" id="NoAl" name="Alcoholization" value="No">
+          <label for="No">No </label><br> </form>
+  </div>
+  <div class="Addict">
+    <form action="#">
+        <h4>Addict:</h4>
+        <input type="radio" id="YesA" name="Addict" value="Yes">
+          <label for="Yes">Yes</label><br>
+          <input type="radio" id="NoA" name="Addict" value="No">
+          <label for="No">No </label><br> </form>
+  </div>
+ <div class="Others">
+    <h4>Comments:</h4>
+    <textarea></textarea>
+ </div>
+</section>
+
+
+<script src="main.js"></script>
+<!-- Submit Button -->
+<button type="submit" onclick="window.location.href='types.php'">Add Co-morbidity</button>
+</form>
+</div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+    <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
+</div>
+
+</body>
+</html>
