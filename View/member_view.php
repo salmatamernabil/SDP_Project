@@ -1,3 +1,9 @@
+<?php
+session_start();
+
+// Check if the pending notice exists in the session and display 
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,6 +36,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             z-index: 1000;
         }
+
         .navbar .logo {
             color: #3366ff;
             font-size: 2em;
@@ -37,11 +44,12 @@
             text-decoration: none;
             transition: transform 0.3s;
         }
+
         .navbar .logo:hover {
             transform: scale(1.1);
         }
 
-        /* Padding to prevent overlap with fixed navbar */
+        /* Content Section */
         .content {
             padding-top: 125px;
             padding-bottom: 35px;
@@ -79,7 +87,9 @@
 
         .form-group input[type="text"], 
         .form-group input[type="password"], 
-        .form-group input[type="email"] {
+        .form-group input[type="email"], 
+        .form-group input[type="date"], 
+        .form-group select {
             width: 100%;
             padding: 15px;
             border: 1px solid #ddd;
@@ -91,7 +101,7 @@
             box-sizing: border-box;
         }
 
-        .form-group input:focus {
+        .form-group input:focus, .form-group select:focus {
             border-color: #3366ff;
         }
 
@@ -102,6 +112,7 @@
             gap: 10px;
             margin: 10px 0;
         }
+
         .account-type label {
             margin-right: 15px;
         }
@@ -144,20 +155,54 @@
             text-align: center;
             font-size: 1em;
         }
+
     </style>
 </head>
+<script>
+    <?php
+    // Check if the pending notice exists in the session
+    if (isset($_SESSION['pending_notice'])) {
+        echo "alert('" . $_SESSION['pending_notice'] . "');";
+        echo "window.location.href = 'home_view.php';"; // Redirect to home after the alert
+        unset($_SESSION['pending_notice']); // Clear after displaying
+    }
+    if (isset($_SESSION['error'])) {
+        echo "alert('" . $_SESSION['error'] . "');";
+        unset($_SESSION['error']); // Clear error message after displaying
+    }
+    ?>
+</script>
+
 <body>
 
     <!-- Navbar -->
     <div class="navbar">
-        <a href="home.php" class="logo">Bravo</a>
+        <a href="home_view.php" class="logo">Bravo</a>
     </div>
 
     <!-- Content Section -->
     <div class="content">
         <div class="form-container">
             <h2>Sign Up</h2>
-            <form id="signupForm" action="signup_process.php" method="POST" onsubmit="return validateForm()">
+            <form id="signupForm" action="../Controller/member_controller.php" method="POST">
+            
+                <div class="form-group">
+                    <input type="text" name="full_name" id="full_name" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="date" name="birth_date" id="birth_date" placeholder="Birth Date" required>
+                </div>
+                <div class="form-group">
+                    <select name="gender" id="gender" required>
+                        <option value="" disabled selected>Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="mobile_number" id="mobile_number" placeholder="Mobile Number" required>
+                </div>
                 <div class="form-group">
                     <input type="text" name="username" id="username" placeholder="Username" required>
                 </div>
@@ -174,44 +219,22 @@
                 </div>
                 <button type="submit">Sign Up</button>
             </form>
-            <a href="SignIn.php" class="form-link">Already have an account? Sign In</a>
+            <a href="sign_in_view.php" class="form-link">Already have an account? Sign In</a>
         </div>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-        <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
+        <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
     </div>
-
     <script>
-        function validateForm() {
-            // Username validation: Letters and numbers only
-            const username = document.getElementById("username").value;
-            const usernamePattern = /^[a-zA-Z0-9]+$/;
-            if (!usernamePattern.test(username)) {
-                alert("Username should contain only letters and numbers.");
-                return false;
-            }
-
-            // Password validation: At least 8 characters, one uppercase, one lowercase, one number, one special character
-            const password = document.getElementById("password").value;
-            const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}$/;
-            if (!passwordPattern.test(password)) {
-                alert("Password must be at least 8 characters long, contain an uppercase letter, a lowercase letter, a number, and a special character.");
-                return false;
-            }
-
-            // Check account type and redirect accordingly
-            const accountType = document.querySelector('input[name="account_type"]:checked').value;
-            if (accountType === "Doctor") {
-                document.getElementById("signupForm").action = "doctor_home.php";
-            } else {
-                document.getElementById("signupForm").action = "trainee_home.php";
-            }
-
-            return true; // Proceed with form submission
-        }
-    </script>
-
+    <?php if (isset($_GET['status']) && $_GET['status'] == 'success'): ?>
+        alert("Your account registration request has been submitted and will be reviewed shortly.");
+        window.location.href = 'home_view.php'; // Redirect to home page after alert
+    <?php elseif (isset($_GET['error'])): ?>
+        alert("<?php echo htmlspecialchars($_GET['error']); ?>");
+    <?php endif; ?>
+</script>
+   
 </body>
 </html>
