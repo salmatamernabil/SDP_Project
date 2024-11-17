@@ -1,3 +1,4 @@
+<?php session_start(); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -137,31 +138,48 @@
 
     <!-- Navbar -->
     <div class="navbar">
-        <a href="home.php" class="logo">Bravo</a>
+        <a href="home_view.php" class="logo">Bravo</a>
     </div>
 
     <!-- Content Section -->
     <div class="content">
         <div class="form-container">
             <h2>Sign In</h2>
-            <form action="signin_process.php" method="POST">
+            <form action="../Controller/sign_in_controller.php?action=signIn" method="POST">
                 <div class="form-group">
                     <input type="text" name="username" placeholder="Username" required>
                 </div>
                 <div class="form-group">
                     <input type="password" name="password" placeholder="Password" required>
                 </div>
-                <button type="button" onclick="window.location.href='home.php'">Sign In</button>
-
+                <button type="submit">Sign In</button>
             </form>
-            <a href="SignUp.php" class="form-link">Don't have an account? Sign Up</a>
+            <a href="member_view.php" class="form-link">Don't have an account? Sign Up</a>
         </div>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-        <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
+        <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
     </div>
+    
+    <script>
+    <?php
+    // Check if the pending notice exists in the session
+    if (isset($_SESSION['pending_notice'])) {
+        // Display the pending message in a JavaScript alert and then redirect
+        echo "alert('" . $_SESSION['pending_notice'] . "');";
+        echo "window.location.href = 'home_view.php';"; // Redirect to home after the alert
+        // Clear the session variable after displaying the message
+        unset($_SESSION['pending_notice']);
+    } elseif (isset($_SESSION['error'])) {
+        // If there's an error, display it without redirecting
+        echo "alert('" . $_SESSION['error'] . "');";
+        unset($_SESSION['error']); // Clear error after displaying
+    }
+    ?>
+    </script>
+
 
 </body>
 </html>
