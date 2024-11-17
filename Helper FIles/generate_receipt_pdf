@@ -1,0 +1,48 @@
+<?php
+session_start();
+require_once '../tcpdf/tcpdf.php';
+
+// Retrieve receipt data from session
+$receiptData = $_SESSION['receiptData'] ?? [
+    'name' => 'N/A',
+    'email' => 'N/A',
+    'phone' => 'N/A',
+    'course' => 'N/A',
+    'amount' => 'N/A',
+    'date' => date("Y-m-d")
+];
+
+// Create new PDF document
+$pdf = new TCPDF();
+
+// Set document information
+$pdf->SetCreator(PDF_CREATOR);
+$pdf->SetAuthor('Bravo NGO');
+$pdf->SetTitle('Donation Receipt');
+$pdf->SetSubject('Donation Receipt');
+
+// Add a page
+$pdf->AddPage();
+
+// Set the content for the PDF
+$html = '
+<h2>Donation Receipt</h2>
+<p>Thank you for your generous donation!</p>
+<table>
+    <tr><td><strong>Name:</strong></td><td>' . htmlspecialchars($receiptData['name']) . '</td></tr>
+    <tr><td><strong>Email:</strong></td><td>' . htmlspecialchars($receiptData['email']) . '</td></tr>
+    <tr><td><strong>Phone Number:</strong></td><td>' . htmlspecialchars($receiptData['phone']) . '</td></tr>
+    <tr><td><strong>Course Donated To:</strong></td><td>' . htmlspecialchars($receiptData['course']) . '</td></tr>
+    <tr><td><strong>Amount:</strong></td><td>EGP ' . htmlspecialchars($receiptData['amount']) . '</td></tr>
+    <tr><td><strong>Date:</strong></td><td>' . htmlspecialchars($receiptData['date']) . '</td></tr>
+</table>
+';
+
+// Write the HTML content to the PDF
+$pdf->writeHTML($html, true, false, true, false, '');
+
+// Output PDF for download
+$pdf->Output('Donation_Receipt.pdf', 'D');
+
+// Clear receipt data from session after generating the PDF to prevent reuse
+unset($_SESSION['receiptData']);
