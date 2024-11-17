@@ -149,7 +149,7 @@
     <div class="content">
         <div class="form-container">
             <h2>Add New Patient</h2>
-            <form action="/action_page.php" method="POST">
+            <form action="../Controller/add_patient_controller.php" method="POST">
                 <!-- Visit Date -->
                 <div class="form-group">
                     <label for="Visit">Visit-date:</label>
@@ -218,7 +218,7 @@
                 </div>
 
                 <!-- Add Patient Button -->
-                <button type="button" onclick="window.location.href='BMI.php'">Add Patient</button>
+                <button type="submit">Add Patient</button>
 
             </form>
         </div>
@@ -226,9 +226,8 @@
 
     <!-- Footer -->
     <div class="footer">
-        <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
+        <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
     </div>
 
 </body>
 </html>
-
