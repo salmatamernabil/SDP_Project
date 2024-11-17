@@ -173,10 +173,10 @@
 
     <!-- Navbar -->
     <div class="navbar">
-        <a href="home.php" class="logo">Bravo</a> <!-- Stylish Bravo organization name on the left -->
+        <a href="home_view.php" class="logo">Bravo</a> <!-- Stylish Bravo organization name on the left -->
         <div>
-            <a href="donate.php">Donate</a> <!-- Join Us leads to donate.php -->
-            <a href="SignUp.php">Join Us</a> <!-- Update this link to donate.php -->
+            <a href="donate_view.php">Donate</a> <!-- Join Us leads to donate.php -->
+            <a href="member_view.php">Join Us</a> <!-- Update this link to donate.php -->
         </div>
     </div>
 
@@ -193,24 +193,15 @@
         <div class="info-box">
             <h3>Give Now</h3>
             <p>Take action by making a tax-deductible donation to support our cause.</p>
-            <a href="donate.php">Make a Donation</a>
+            <a href="donate_view.php">Make a Donation</a>
         </div>
-        <div class="info-box">
-            <h3>Give Monthly</h3>
-            <p>Become a recurring donor to help us sustain our work over the long term.</p>
-            <a href="donate.php">Give Monthly</a>
-        </div>
-        <div class="info-box">
-            <h3>Give Supplies</h3>
-            <p>Support hospitals by providing essential medical supplies and equipment to improve patient care and save lives.</p>
-            <a href="donate.php">Provide Supplies</a>
-        </div>
+        
     </div>
 
     <!-- Footer -->
     <div class="footer">
-        <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
-        <p><span>One of our team?</span> <a href="admin_login.php">Login</a></p>
+        <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
+        <p><span>One of our team?</span> <a href="admin_login_view.php">Login</a></p>
     </div>
 
 </body>
