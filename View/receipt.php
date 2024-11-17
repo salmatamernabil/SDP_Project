@@ -1,3 +1,19 @@
+<?php
+session_start();
+
+// Retrieve receipt data from session
+$receiptData = $_SESSION['receiptData'] ?? [
+    'name' => 'N/A',
+    'email' => 'N/A',
+    'phone' => 'N/A',
+    'course' => 'N/A',
+    'amount' => 'N/A',
+    'date' => date("Y-m-d")
+];
+
+// Optional: Clear receipt data after displaying to prevent reuse
+unset($_SESSION['receiptData']);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,14 +55,6 @@
         }
         .navbar .logo:hover {
             transform: scale(1.1);
-        }
-
-        .navbar a {
-            color: #3366ff;
-            text-decoration: none;
-            padding: 10px 20px;
-            font-size: 1.1em;
-            font-weight: 600;
         }
 
         /* Padding to prevent overlap with fixed navbar */
@@ -117,31 +125,34 @@
 
     <!-- Navbar -->
     <div class="navbar">
-        <a href="home.php" class="logo">Bravo</a>
+        <a href="home_view.php" class="logo">Bravo</a>
     </div>
 
-    <!-- Content Section -->
-    <div class="content">
-        <div class="receipt-container">
-            <h2>Donation Receipt</h2>
-            <p>Thank you for your generous donation!</p>
+<!-- Content Section -->
+<div class="content">
+    <div class="receipt-container">
+        <h2>Donation Receipt</h2>
+        <p>Thank you for your generous donation!</p>
 
-            <div class="receipt-details">
-                <p><strong>Name:</strong> <?php echo htmlspecialchars($_POST['name']); ?></p>
-                <p><strong>Email:</strong> <?php echo htmlspecialchars($_POST['email']); ?></p>
-                <p><strong>Phone Number:</strong> <?php echo htmlspecialchars($_POST['phone']); ?></p>
-                <p><strong>Course Donated To:</strong> <?php echo htmlspecialchars($_POST['course']); ?></p>
-                <p><strong>Amount:</strong> EGP <?php echo htmlspecialchars($_POST['amount']); ?></p>
-                <p><strong>Date:</strong> <?php echo date("Y-m-d"); ?></p>
-            </div>
-
-            <a href="/home.php" class="button-back">Back to Home</a>
+        <div class="receipt-details">
+            <p><strong>Name:</strong> <?php echo htmlspecialchars($receiptData['name']); ?></p>
+            <p><strong>Email:</strong> <?php echo htmlspecialchars($receiptData['email']); ?></p>
+            <p><strong>Phone Number:</strong> <?php echo htmlspecialchars($receiptData['phone']); ?></p>
+            <p><strong>Course Donated To:</strong> <?php echo htmlspecialchars($receiptData['course']); ?></p>
+            <p><strong>Amount:</strong> EGP <?php echo htmlspecialchars($receiptData['amount']); ?></p>
+            <p><strong>Date:</strong> <?php echo htmlspecialchars($receiptData['date']); ?></p>
         </div>
+
+        <!-- Button to Download PDF -->
+        <a href="../Helper Files/generate_receipt_pdf.php" class="button-back">Download PDF</a>
+        <a href="../View/home_view.php" class="button-back">Back to Home</a>
     </div>
+</div>
+
 
     <!-- Footer -->
     <div class="footer">
-        <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
+        <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
     </div>
 
 </body>
