@@ -1,3 +1,8 @@
+<?php
+session_start();
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,6 +99,14 @@
             border-color: #3366ff;
         }
 
+        /* Error Message Styling */
+        .error-message {
+            color: red;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
         /* Button Styling */
         button {
             width: 100%;
@@ -137,22 +150,31 @@
 
     <!-- Navbar -->
     <div class="navbar">
-        <a href="home.php" class="logo">Bravo</a>
+        <a href="home_view.php" class="logo">Bravo</a>
     </div>
 
     <!-- Content Section -->
     <div class="content">
         <div class="form-container">
             <h2>Sign In</h2>
-            <form action="signin_process.php" method="POST">
+
+            <!-- Display error message if exists -->
+            <?php
+            if (isset($_SESSION['error'])) {
+                echo "<p class='error-message'>" . $_SESSION['error'] . "</p>";
+                unset($_SESSION['error']); // Clear error after displaying it
+            }
+            ?>
+
+            <form action="../Controller/admin_sign_in_controller.php" method="POST">
+                <!-- Admin Sign-In Form -->
                 <div class="form-group">
                     <input type="text" name="username" placeholder="Username" required>
                 </div>
                 <div class="form-group">
                     <input type="password" name="password" placeholder="Password" required>
                 </div>
-                <button type="button" onclick="window.location.href='admin_home.php'">Sign In</button>
-
+                <button type="submit">Sign In</button>
             </form>
           
         </div>
@@ -160,7 +182,7 @@
 
     <!-- Footer -->
     <div class="footer">
-        <p>Contact Us: info@ngo.org | © 2024 Bravo</p>
+        <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
     </div>
 
 </body>
