@@ -39,25 +39,24 @@ class MemberModel implements ISubject {
     }
 
     // Request account creation, notifying observers
-    public function requestAccountCreation($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType,$admin_id) {
+    public function requestAccountCreation($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType, $adminId, $specialty) {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-        // Insert the request into pending_members for admin approval
-        $query = "INSERT INTO pending_members (FullName, BirthDate, Gender, MobileNumber, username, email, password, account_type,admin_id) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?)";
+    
+        $query = "INSERT INTO pending_members (FullName, BirthDate, Gender, MobileNumber, username, email, password, account_type, admin_id, Specialty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($query);
         if ($stmt) {
-            $stmt->bind_param("sssssssss", $fullName, $birthDate, $gender, $mobileNumber, $username, $email, $hashedPassword, $accountType,$admin_id);
+            $stmt->bind_param("ssssssssss", $fullName, $birthDate, $gender, $mobileNumber, $username, $email, $hashedPassword, $accountType, $adminId, $specialty);
             if ($stmt->execute()) {
-                // Notify observers about the new account creation request
-                $this->notifyObservers("New user signup request: $username ($email) for account type $accountType");
+                $this->notifyObservers("New user signup request: $username ($email) for account type $accountType with specialty $specialty");
                 $stmt->close();
                 return true;
             }
             $stmt->close();
         }
-
+    
         return false;
     }
+    
 
 
         // Retrieve a specific member by ID
