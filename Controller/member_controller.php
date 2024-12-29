@@ -14,29 +14,27 @@ class SignupController {
 
     // In SignupController.php
     // SignupController.php
-public function requestSignup($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType) {
-    session_start();
-
-    // Fetch all admins to randomly assign one to the new signup
-    $adminModel = new AdminModel();
-    $admins = $adminModel->getAllAdmins();
-
-    // Ensure we have admins to assign; otherwise, handle the error
-    if (!empty($admins)) {
-        $assignedAdmin = $admins[array_rand($admins)]['admin_id'];
-    } else {
-        header("Location: ../View/member_view.php?error=No available admins to assign. Please try again later.");
+    public function requestSignup($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType, $specialty) {
+        // Session already started, no need for another session_start()
+        $adminModel = new AdminModel();
+        $admins = $adminModel->getAllAdmins();
+    
+        if (!empty($admins)) {
+            $assignedAdmin = $admins[array_rand($admins)]['admin_id'];
+        } else {
+            header("Location: ../View/member_view.php?error=No available admins to assign. Please try again later.");
+            exit();
+        }
+    
+        // Pass `specialty` as the 10th parameter
+        if ($this->member->requestAccountCreation($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType, $assignedAdmin, $specialty)) {
+            header("Location: ../View/member_view.php?status=success");
+        } else {
+            header("Location: ../View/member_view.php?error=Signup request failed. Please try again.");
+        }
         exit();
     }
-
-    // Save the signup request with the assigned admin
-    if ($this->member->requestAccountCreation($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType, $assignedAdmin)) {
-        header("Location: ../View/member_view.php?status=success");
-    } else {
-        header("Location: ../View/member_view.php?error=Signup request failed. Please try again.");
-    }
-    exit();
-}
+    
 
     
 
@@ -69,9 +67,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = $_POST['password'];
     $accountType = $_POST['account_type'];
+    $specialty = isset($_POST['specialty']) ? $_POST['specialty'] : null;
 
     // Process the signup request
     $signupController = new SignupController();
-    $signupController->requestSignup($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType);
+    $signupController->requestSignup($fullName, $birthDate, $gender, $mobileNumber, $username, $email, $password, $accountType, $specialty);
 }
 ?>
