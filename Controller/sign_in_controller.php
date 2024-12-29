@@ -7,28 +7,36 @@ class SignInController {
 
     public function __construct() {
         $this->signInModel = new SignInModel();
+        error_log("SignInController initialized.");
     }
 
     public function signIn($username, $password) {
-        // Check the user's status
-        $status = $this->signInModel->checkUserStatus($username, $password);
+        // Debug: Log the start of sign-in
+        error_log("Sign-in attempt for username: $username");
 
-        switch ($status) {
-            case 'approved':
-                $_SESSION['user'] = $username;
-                header("Location: ../View/home_view.php"); // Redirect to the dashboard
-                exit();
+        // Attempt to sign in the user
+        $user = $this->signInModel->signIn($username, $password);
 
-            case 'pending':
-                $_SESSION['pending_notice'] = "Please wait, your account is under review. Check back later.";
-                header("Location: ../View/sign_in_view.php"); // Redirect back to sign-in view with message
-                exit();
-
-            case 'invalid':
-            default:
-                $_SESSION['error'] = "Invalid username or password.";
-                header("Location: ../View/sign_in_view.php"); // Redirect to sign-in page with error
-                exit();
+        if ($user === 'pending') {
+            // Handle pending users
+            error_log("User $username is pending approval.");
+            $_SESSION['pending_notice'] = "Please wait, your account is under review. Check back later.";
+            header("Location: ../View/sign_in_view.php");
+            exit();
+        } elseif ($user instanceof Doctor || $user instanceof Trainee) {
+            // Handle approved users (Doctor or Trainee)
+            $userType = ($user instanceof Doctor) ? "Doctor" : "Trainee";
+            error_log("User $username signed in successfully as $userType.");
+            $_SESSION['user'] = serialize($user); // Store user object in session
+            $redirectPage = ($user instanceof Doctor) ? "doctor_home_view.php" : "trainee_home_view.php";
+            header("Location: ../View/$redirectPage"); // Redirect based on user type
+            exit();
+        } else {
+            // Handle invalid users
+            error_log("Sign-in failed for username: $username. Invalid credentials.");
+            $_SESSION['error'] = "Invalid username or password.";
+            header("Location: ../View/sign_in_view.php");
+            exit();
         }
     }
 }
@@ -37,6 +45,9 @@ class SignInController {
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = $_POST['username'];
     $password = $_POST['password'];
+
+    // Debug: Log the received form data
+    error_log("Received POST data: username=$username");
 
     $signInController = new SignInController();
     $signInController->signIn($username, $password);
