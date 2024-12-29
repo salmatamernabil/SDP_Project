@@ -231,90 +231,109 @@ class AdminModel implements IObserver {
     }
     
     
-    // Approve an account
-    public function approveAccount($username) {
-        $selectQuery = "SELECT * FROM pending_members WHERE username = ?";
-        $selectStmt = $this->conn->prepare($selectQuery);
-        if ($selectStmt) {
-            $selectStmt->bind_param("s", $username);
-            $selectStmt->execute();
-            $result = $selectStmt->get_result();
-            $user = $result->fetch_assoc();
-            $selectStmt->close();
-    
+// Approve an account
+public function approveAccount($username) {
+    // Retrieve user details from `pending_members`
+    $selectQuery = "SELECT * FROM pending_members WHERE username = ?";
+    $selectStmt = $this->conn->prepare($selectQuery);
+    if ($selectStmt) {
+        $selectStmt->bind_param("s", $username);
+        $selectStmt->execute();
+        $result = $selectStmt->get_result();
+        $user = $result->fetch_assoc();
+        $selectStmt->close();
 
-            if ($user) {
-                // Insert into the member table first to get the MemberID
-                $insertMemberQuery = "INSERT INTO member (FullName, BirthDate, Gender, MobileNumber) VALUES (?, ?, ?, ?)";
-                $insertMemberStmt = $this->conn->prepare($insertMemberQuery);
-                if ($insertMemberStmt) {
-                    $insertMemberStmt->bind_param("ssss", $user['FullName'], $user['BirthDate'], $user['Gender'], $user['MobileNumber']);
-                    if ($insertMemberStmt->execute()) {
-                        $memberId = $this->conn->insert_id; // Get the newly created MemberID
-    
-                        // Now insert into account_member with the reference to the MemberID
-                        $insertAccountMemberQuery = "INSERT INTO account_member (MemberID, username, email, password, account_type, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
-                        $insertAccountMemberStmt = $this->conn->prepare($insertAccountMemberQuery);
-                        if ($insertAccountMemberStmt) {
-                            $insertAccountMemberStmt->bind_param("issss", $memberId, $user['username'], $user['email'], $user['password'], $user['account_type']);
-                            if ($insertAccountMemberStmt->execute()) {
-                                error_log("Account for username {$username} approved and added to account_member and member.");
-                                $accountMemberId = $this->conn->insert_id; 
-                        // Insert into `approve_account_member`
-                        $adminId = $_SESSION['admin_id']; // Assuming the admin's ID is stored in the session
-                        $insertApproveQuery = "INSERT INTO approve_account_member (admin_id) VALUES (?)";
-                        $insertApproveStmt = $this->conn->prepare($insertApproveQuery);
-                        $insertApproveStmt->bind_param("i", $adminId);
-                        if (!$insertApproveStmt->execute()) {
-                            throw new Exception("Failed to insert into approve_account_member");
-                        }
-                        $approveId = $this->conn->insert_id; // Get the newly created approve_id
-                        $insertApproveStmt->close();
+        if ($user) {
+            // Insert into `member` table
+            $insertMemberQuery = "INSERT INTO member (FullName, BirthDate, Gender, MobileNumber) VALUES (?, ?, ?, ?)";
+            $insertMemberStmt = $this->conn->prepare($insertMemberQuery);
+            if ($insertMemberStmt) {
+                $insertMemberStmt->bind_param("ssss", $user['FullName'], $user['BirthDate'], $user['Gender'], $user['MobileNumber']);
+                if ($insertMemberStmt->execute()) {
+                    $memberId = $this->conn->insert_id; // Get the new MemberID
 
-                        // Insert into `approve_account_member_detail`
-                        $detailDescription = "Approved account for user: $username";
-                        $insertDetailQuery = "INSERT INTO approve_account_member_detail (approve_id, account_member_id, detail_description) VALUES (?, ?, ?)";
-                        $insertDetailStmt = $this->conn->prepare($insertDetailQuery);
-                        $insertDetailStmt->bind_param("iis", $approveId, $accountMemberId, $detailDescription);
-                        if (!$insertDetailStmt->execute()) {
-                            throw new Exception("Failed to insert into approve_account_member_detail");
-                        }
-                        $insertDetailStmt->close();
-                                // Delete from pending_members table
-                                $deleteQuery = "DELETE FROM pending_members WHERE username = ?";
-                                $deleteStmt = $this->conn->prepare($deleteQuery);
-                                if ($deleteStmt) {
-                                    $deleteStmt->bind_param("s", $username);
-                                    if ($deleteStmt->execute()) {
-                                        error_log("Account for username {$username} deleted from pending_members.");
-                                    } else {
-                                        error_log("Failed to delete username {$username} from pending_members.");
-                                    }
-                                    $deleteStmt->close();
-                                }
-                                $insertAccountMemberStmt->close();
-                                $insertMemberStmt->close();
-                                return true;
-                            } else {
-                                error_log("Failed to insert username {$username} into account_member.");
-                            }
-                            $insertAccountMemberStmt->close();
-                        }
-                    } else {
-                        error_log("Failed to insert username {$username} into member.");
+                    // Determine account type and insert into respective table
+                    $accountType = strtolower($user['account_type']);
+                    $insertSpecificTable = null;
+
+                    if ($accountType === 'doctor') {
+                        $insertSpecificTable = "INSERT INTO doctor (MemberID, Username, Email, Password, Specialty) VALUES (?, ?, ?, ?, ?)";
+                    } elseif ($accountType === 'trainee') {
+                        $insertSpecificTable = "INSERT INTO trainee (MemberID, Username, Email, Password, Specialty) VALUES (?, ?, ?, ?, ?)";
                     }
-                    $insertMemberStmt->close();
+                    
+                    if ($insertSpecificTable) {
+                        $specificStmt = $this->conn->prepare($insertSpecificTable);
+                        $specificStmt->bind_param(
+                            "issss",
+                            $memberId,
+                            $user['username'],
+                            $user['email'],
+                            $user['password'], // Assuming the password is already hashed
+                            $user['Specialty']
+                        );
+                    
+                        if (!$specificStmt->execute()) {
+                            throw new Exception("Failed to insert into {$accountType} table: " . $specificStmt->error);
+                        }
+                    
+                        $specificStmt->close();
+                    }
+                    
+
+                    // Log the approval in `approve_account_member`
+                    $adminId = $_SESSION['admin_id']; // Assuming the admin's ID is stored in the session
+                    $insertApproveQuery = "INSERT INTO approve_account_member (admin_id) VALUES (?)";
+                    $insertApproveStmt = $this->conn->prepare($insertApproveQuery);
+                    $insertApproveStmt->bind_param("i", $adminId);
+                    if (!$insertApproveStmt->execute()) {
+                        throw new Exception("Failed to insert into approve_account_member");
+                    }
+                    $approveId = $this->conn->insert_id; // Get the newly created approve_id
+                    $insertApproveStmt->close();
+
+                    // Log details in `approve_account_member_detail`
+                    $detailDescription = "Approved account for user: $username";
+                    $insertDetailQuery = "INSERT INTO approve_account_member_detail (approve_id, doctor_id, trainee_id, detail_description) VALUES (?, ?, ?, ?)";
+                    $insertDetailStmt = $this->conn->prepare($insertDetailQuery);
+
+                    $doctorId = ($accountType === 'doctor') ? $memberId : null;
+                    $traineeId = ($accountType === 'trainee') ? $memberId : null;
+                    $insertDetailStmt->bind_param("iiis", $approveId, $doctorId, $traineeId, $detailDescription);
+
+                    if (!$insertDetailStmt->execute()) {
+                        throw new Exception("Failed to insert into approve_account_member_detail");
+                    }
+                    $insertDetailStmt->close();
+
+                    // Delete the user from `pending_members`
+                    $deleteQuery = "DELETE FROM pending_members WHERE username = ?";
+                    $deleteStmt = $this->conn->prepare($deleteQuery);
+                    if ($deleteStmt) {
+                        $deleteStmt->bind_param("s", $username);
+                        if ($deleteStmt->execute()) {
+                            error_log("Account for username {$username} deleted from pending_members.");
+                        } else {
+                            error_log("Failed to delete username {$username} from pending_members.");
+                        }
+                        $deleteStmt->close();
+                    }
+
+                    return true; // Successfully approved
+                } else {
+                    error_log("Failed to insert username {$username} into member.");
                 }
-            } else {
-                error_log("User {$username} not found in pending_members.");
+                $insertMemberStmt->close();
             }
         } else {
-            error_log("Failed to prepare select statement for username {$username}.");
+            error_log("User {$username} not found in pending_members.");
         }
-    
-        return false;
+    } else {
+        error_log("Failed to prepare select statement for username {$username}.");
     }
-    
+
+    return false; // Return false if anything fails
+}
 
     public function getAdminId($username) {
         $query = "SELECT admin_id FROM admin WHERE username = ?";
