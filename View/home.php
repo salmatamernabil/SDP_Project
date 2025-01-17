@@ -1,3 +1,10 @@
+<?php
+require_once '../Controller/home_controller.php';
+$controller = new HomeController();
+$controller->showHomePage();
+$courses = $_SESSION['courses'] ?? [];
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -78,16 +85,19 @@
             margin-bottom: 20px;
         }
 
+       
         /* Info Section */
         .info-section {
             display: flex;
-            justify-content: space-around;
+            justify-content: center; /* Center the boxes horizontally */
+            align-items: center; /* Center the boxes vertically */
             text-align: center;
             padding: 50px 0;
             background-color: white;
+            gap: 30px; /* Add space between the boxes */
         }
         .info-box {
-            width: 25%;
+            width: 30%; /* Adjust width to fit two boxes side by side */
             background-color: #f9f9f9;
             padding: 20px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -156,8 +166,8 @@
             transform: scale(1.1);
         }
 
-        /* Media Queries */
-        @media (max-width: 768px) {
+              /* Media Queries */
+              @media (max-width: 768px) {
             .info-section {
                 flex-direction: column;
                 padding: 20px;
@@ -192,10 +202,17 @@
     <div class="info-section">
         <div class="info-box">
             <h3>Give Now</h3>
-            <p>Take action by making a tax-deductible donation to support our cause.</p>
+            <p>Take action by making a money donation to support our cause.</p>
             <a href="donate_view.php">Make a Donation</a>
         </div>
         
+   
+    <div class="info-box">
+            <h3>Donate Supplies</h3>
+            <p>Contribute essential supplies to help those in need.</p>
+            <a href="donate_supplies_view.php">Donate Supplies</a>
+       
+    </div>
     </div>
 
     <!-- Footer -->
