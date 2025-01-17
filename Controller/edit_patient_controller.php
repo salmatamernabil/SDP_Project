@@ -1,93 +1,97 @@
 <?php
-session_start();
-require_once '../Model/patient_model.php';
+// Start the session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-class EditPatientController {
+
+
+// Include the model
+require_once '../Model/patient_model.php';
+require_once '../Model/admin_model.php';
+require_once '../Design Patterns/Decorater.php';
+
+class DeletePatientController {
     private $patientModel;
+    private $adminComponent; 
 
     public function __construct() {
+        $adminModel = new AdminModel();
+        $this->adminComponent = $adminModel->getCurrentAdminInstance();
         $this->patientModel = new PatientModel();
+        $this->initializePatientsInSession();
+    }
+
+    private function initializePatientsInSession() {
+        if (!isset($_SESSION['PatientsDelete']) || empty($_SESSION['PatientsDelete'])) {
+            $patients = $this->patientModel->getPatients();
+            error_log("[DEBUG] Patients fetched from database: " . print_r($patients, true));
+            if (!empty($patients)) {
+                $_SESSION['PatientsDelete'] = $patients;
+            } else {
+                $_SESSION['PatientsDelete'] = []; // Initialize as an empty array to avoid warnings
+            }
+            error_log("[DEBUG] Patients initialized in session: " . print_r($_SESSION['PatientsDelete'], true));
+        }
     }
 
     public function getPatients() {
-        echo json_encode($this->patientModel->getPatients());
+        $patients = $this->patientModel->getPatients();
+        error_log("[DEBUG] Patients fetched from database: " . print_r($patients, true));
+        return $patients;
     }
 
-    public function getPatientById($patientId) {
-        $data = $this->patientModel->getPatientDetails($patientId);
-        error_log("Data for patient ID $patientId: " . print_r($data, true)); // Log data for debugging
-        header('Content-Type: application/json');
-        echo json_encode($data);
-    }
-    
+    public function deletePatient($patientId) {
+        // Check if the patient ID is valid
+        if (!$patientId) {
+            $_SESSION['error'] = "Invalid patient ID.";
+            header("Location: ../View/delete_patient_view.php");
+            exit();
+        }
 
-    public function updatePatient($patientId) {
-        // Decode JSON data from frontend
-        $data = json_decode(file_get_contents('php://input'), true);
-    
-        // Log decoded data to check if it was received correctly
-        error_log("Decoded JSON data: " . print_r($data, true));
-    
-        if (is_null($data)) {
-            error_log("Failed to decode JSON data. Raw input: " . file_get_contents('php://input'));
+        // Attempt to delete the patient using the AdminComponent instance
+        $success = $this->adminComponent->deletePatient($patientId);
+
+        if ($success) {
+            // Refresh the patient data in the session
+            $this->refreshPatientsInSession();
+
+            $_SESSION['message'] = "Patient deleted successfully.";
+        } else {
+            $_SESSION['error'] = "Failed to delete patient.";
         }
-    
-        // Check if patientId is provided and valid
-        if (is_null($patientId)) {
-            error_log("PatientId is missing or invalid.");
-            return ['success' => false, 'error' => 'PatientId is required'];
-        }
-    
-        // Pass data and patientId to updatePatientDetails in the model
-        $result = $this->patientModel->updatePatientDetails($data, $patientId);
-    
-        // Log the result of updatePatientDetails for debugging
-        error_log("Result from updatePatientDetails: " . print_r($result, true));
-    
-            echo json_encode(['success' => $result ? true : false]);
-            exit(); // Ensure no further output interferes with the JSON response
-        
-        
+
+        // Redirect back to the patient details view
+        header("Location: ../View/delete_patient_view.php");
+        exit();
     }
-    
-    
+
+    private function refreshPatientsInSession() {
+        // Fetch patients from the database and update the session
+        $patients = $this->patientModel->getPatients();
+        error_log("[DEBUG] Patients fetched from database: " . print_r($patients, true));
+        $_SESSION['PatientsDelete'] = $patients ?: []; // Default to an empty array if no patients are found
+    }
 }
 
-
-$controller = new EditPatientController();
-
-
-if (isset($_GET['action']) && $_GET['action'] === 'getPatients') {
-    $editPatientController = new EditPatientController();
-    $editPatientController->getPatients();
-
-    header('Content-Type: application/json');
-    //echo json_encode($patients, JSON_PRETTY_PRINT); // Add JSON_PRETTY_PRINT for readable formatting
+// Handle the form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['patient_id'])) {
+    $patientId = $_POST['patient_id'];
+    $deleteController = new DeletePatientController();
+    $deleteController->deletePatient($patientId);
+} else {
+    // If the request is invalid, redirect to the patient details view
+    $_SESSION['error'] = "Invalid request.";
+    header("Location: ../View/delete_patient_view.php");
     exit();
 }
 
-if (isset($_GET['action'])) {
-    switch ($_GET['action']) {
-        case 'getPatients':
-            $controller->getPatients();
-            break;
-        case 'getPatientById':
-            $controller->getPatientById($_GET['patient_id']);
-            break;
-        case 'updatePatient':
-            // Capture `patientId` from the request and pass it to `updatePatient`
-            $patientId = isset($_GET['patient_id']) ? $_GET['patient_id'] : null;
-            if ($patientId !== null) {
-                $controller->updatePatient($patientId);
-            } else {
-                error_log("PatientId is missing from the request.");
-            }
-            break;
-    }
-}
+// Instantiate the controller
+$controller = new DeletePatientController();
 
-
-
-
-// Check for AJAX request with action=getPatients
+// Include the view
+include '../View/delete_patient_view.php';
 ?>
