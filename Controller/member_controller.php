@@ -2,14 +2,28 @@
 require_once '../Model/member_model.php';
 require_once '../Model/admin_model.php';
 require_once "../Design Patterns/Observer.php";
+require_once "../Design Patterns/Facade.php";
 
 class SignupController {
     private $member;
 
     public function __construct() {
+        
         $this->member = new MemberModel();
         $adminObserver = new AdminModel();
-        $this->member->registerObserver($adminObserver);
+        // 6. Decide which recipients or admins you want to notify
+//    For example, a single AdminObserver using "salma.tamer.nabil@gmail.com" (from your snippet)
+        // Register observers (admins)
+        $adminObserver1 = new AdminObserver("aubaiwofre@gmail.com", new MailFacade());
+        $adminObserver2 = new AdminObserver("tolgasaritas99@gmail.com", new MailFacade());
+
+
+// 7. Register them
+$this->member->registerObserver($adminObserver1);
+$this->member->registerObserver($adminObserver2);
+// Create MemberModel, passing the same NotificationSystem:
+
+
     }
 
     // In SignupController.php
