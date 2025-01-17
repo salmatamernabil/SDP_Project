@@ -1,23 +1,42 @@
 <?php
-session_start(); // Start the session at the beginning of the file
-
+// Include the AdminController
+require_once '../Controller/admin_controller.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+ // Start the session at the beginning of the file
 // Check if the session variables are set, and handle the case if they are not
 if (!isset($_SESSION['admin_role']) || !isset($_SESSION['admin_id'])) {
     header("Location: ../View/admin_login_view.php");
     exit();
 }
-
 $upgradeableAdmins = $_SESSION['upgradeableAdmins'] ?? []; // Use an empty array as default if not set
 
 
-// Include the AdminController
-require_once '../Controller/admin_controller.php';
+
 
 // Create an instance of AdminController
 $adminController = new AdminController();
 
 // Check and update admin role in session, if it has changed in the database
 $adminController->checkAndUpdateAdminRole();
+
+// **New Addition:** Fetch Donation Supplies for DonationAdmin
+if ($_SESSION['admin_role'] === 'DonationAdmin') {
+    $_SESSION['logs'][] = "Current admin is DonationAdmin. Fetching donation supplies.";
+    $donationSupplies = $adminController->getDonationSupplies();
+
+    // Ensure $donationSupplies is an array
+    if (!is_array($donationSupplies)) {
+        $donationSupplies = [];
+        $_SESSION['logs'][] = "Donation supplies not found or failed to fetch.";
+        error_log("[ERROR] DonationAdmin: Failed to fetch donation supplies.");
+    }
+
+    // Set the session variable
+    $_SESSION['donationSupplies'] = $donationSupplies;
+   
+}
 ?>
 
 
@@ -39,19 +58,29 @@ $adminController->checkAndUpdateAdminRole();
             min-height: 100vh; /* Ensure full height of the viewport */
         }
 
-        /* Sidebar */
-        .sidebar {
-            width: 200px;
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            position: fixed; /* Fixed position for the sidebar */
-            height: 100vh; /* Full height */
-            z-index: 1; /* Keep it on top */
-            margin-top: 60px; /* Leave space for navbar */
-        }
+    /* Sidebar */
+.sidebar {
+    width: 200px;
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh; /* Full height of the viewport */
+    z-index: 1;
+    margin-top: 60px; /* Leave space for navbar */
+    overflow-y: auto; /* Make the sidebar scrollable */
+}
+.sidebar .logout-button {
+  margin-bottom: 150px;
+}
+
+.sidebar .logout-button:hover {
+    background-color: #c0392b; /* Darker red on hover */
+}
+
+
 
         .sidebar h2 {
             text-align: center;
@@ -69,6 +98,8 @@ $adminController->checkAndUpdateAdminRole();
             align-items: center; /* Center vertically */
         }
 
+
+        
         .sidebar a:hover {
             background-color: #34495e;
         }
@@ -217,27 +248,39 @@ $adminController->checkAndUpdateAdminRole();
     
     <!-- Links for Chief Admin functionalities -->
     <?php if ($_SESSION['admin_role'] === 'ChiefAdmin'): ?>
+        <a href="../View/follow_up_view.php">Follow Up with Patients</a>
         <a href="../View/add_patient_view.php">Add Patient</a>
         <a href="../View/edit_patient_view.php">Edit Patient</a>
-        <a href="delete_patient.php">Delete Patient</a>
-        <a href="edit_patient.php">Add Course</a>
-        <a href="edit_course.php">Edit Course</a>
-        <a href="delete_course.php">Delete Course</a>
+        <a href="../Controller/add_patient_details_controller.php">Add Patient Details</a>
+        <a href="compare_patient_data_view.php">Compare Patient Data</a>
+        <a href="../Controller/delete_patient_controller.php">Delete Patient</a>
+        <a href="add_course_view.php">Add Course</a>
+        <a href="all_courses_view.php">Edit Course</a>
+        <a href="all_courses_view.php">Delete Course</a>
+        <a href="Travel_plan_view.php">Create Travel Plan</a>
     <?php elseif ($_SESSION['admin_role'] === 'SuperAdmin'): ?>
         <!-- Links for Super Admin -->
+        <a href="../View/follow_up_view.php">Follow Up with Patients</a>
         <a href="../View/add_patient_view.php">Add Patient</a>
         <a href="../View/edit_patient_view.php">Edit Patient</a>
-        <a href="edit_patient.php">Add Course</a>
-        <a href="edit_patient.php">Edit Course</a>
-    <?php elseif ($_SESSION['admin_role'] === 'BaseAdmin'): ?>
+        <a href="../Controller/add_patient_details_controller.php">Add Patient Details</a>
+        <a href="compare_patient_data_view.php">Compare Patient Data</a>
+        <a href="add_course_view.php">Add Course</a>
+        <a href="all_courses_view.php">Edit Course</a>
+        <a href="../View/add_patient_view.php">Add Patient Details</a>
+        <a href="Travel_plan_view.php">Create Travel Plan</a>
+        <?php elseif ($_SESSION['admin_role'] === 'BaseAdmin' || $_SESSION['admin_role'] === 'DonationAdmin'|| $_SESSION['admin_role'] === 'PaymentAdmin'): ?>
         <!-- Link for Base Admin -->
+        <a href="../View/follow_up_view.php">Follow Up with Patients</a>
         <a href="add_patient_view.php">Add Patient</a>
-        <a href="edit_patient.php">Add Course</a>
+        <a href="add_course_view.php">Add Course</a>
+        <a href="../Controller/add_patient_details_controller.php">Add Patient Details</a>
+        <a href="compare_patient_data_view.php">Compare Patient Data</a>
+        <a href="Travel_plan_view.php">Create Travel Plan</a>
         <!-- Logout Button in Sidebar -->
-        
-
     <?php endif; ?>
-    <a href="home_view.php">Logout</a>
+    <a href="home_view.php" class="logout-button">Logout</a>
+
 </div>
 
 
@@ -275,7 +318,110 @@ $adminController->checkAndUpdateAdminRole();
             </table>
 
         <?php endif; ?>
-         
+
+        <?php if ($_SESSION['admin_role'] === 'DonationAdmin'): ?>
+    <h2>Donation Supplies</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Serial Number</th>
+                <th>Quantity</th>
+                <th>Brand</th>
+                <th>Delivery Time</th>
+                <th>Delivered</th>
+                <th>Approved</th>
+                <th>Rejected</th>
+                <th>Status</th>
+                <th>Action</th> <!-- New column for action buttons -->
+            </tr>
+        </thead>
+        <tbody>
+            
+            <?php foreach ($_SESSION['donationSupplies'] as $supply): ?>
+                <?php
+                // Skip items that are approved or rejected
+                if ($supply['approved'] === 'yes' || $supply['rejected'] === 'yes') {
+                    continue;
+                }
+                ?>
+                <tr>
+                    <td><?php echo $supply['serial_number']; ?></td>
+                    <td><?php echo $supply['stapler_count']; ?></td>
+                    <td><?php echo $supply['brand']; ?></td>
+                    <td><?php echo $supply['delivery_time']; ?></td>
+                    <td><?php echo $supply['delivered']; ?></td>
+                    <td><?php echo $supply['approved']; ?></td>
+                    <td><?php echo $supply['rejected']; ?></td>
+                    
+                    <td>
+                        <?php
+                        // Fetch the status of the donation item
+                        $status = $adminController->getDonationItemStatus($supply['id']);
+                        echo $status; // Display the status
+                        ?>
+                    </td>
+                    <td>
+                        <?php
+                        // Check if the item is delivered
+                        if ($supply['delivered'] === 'yes'): ?>
+                            <form action="../Controller/admin_controller.php" method="POST">
+    <input type="hidden" name="supply_id" value="<?php echo $supply['id']; ?>">
+    <button type="submit" name="approveDonation" style="background-color: #4CAF50; color: white; padding: 5px 10px; border: none; cursor: pointer; margin-right: 5px;">Approve</button>
+    <button type="submit" name="rejectDonation" style="background-color: #f44336; color: white; padding: 5px 10px; border: none; cursor: pointer;">Reject</button>
+</form>
+                        <?php else: ?>
+                            No action available
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+
+<?php if ($_SESSION['admin_role'] === 'PaymentAdmin'): ?>
+    <h2>Cash Donations</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Donor Name</th>
+                <th>Email</th>
+                <th>Amount</th>
+                <th>Course</th>
+                <th>Date</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            $cashDonations = $_SESSION['cashDonations'] ?? []; // Use session variable
+            foreach ($cashDonations as $donation): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($donation['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><?php echo htmlspecialchars($donation['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><?php echo htmlspecialchars($donation['amount'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><?php echo htmlspecialchars($donation['course'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><?php echo htmlspecialchars($donation['date'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td>
+                    
+
+                    <form action="../Controller/admin_controller.php" method="POST">
+    <input type="hidden" name="donation_id" value="<?php echo htmlspecialchars($donation['id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+    <button type="submit" name="approveCashDonation" style="background-color: #4CAF50; color: white; padding: 5px 10px; border: none; cursor: pointer;">Approve</button>
+</form>
+
+
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+
+
+
        <!-- Dashboard Statistics -->
         <div class="dashboard">
             <div class="widget">
