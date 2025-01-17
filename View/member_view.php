@@ -212,6 +212,19 @@ session_start();
                 <div class="form-group">
                     <input type="password" name="password" id="password" placeholder="Password" required>
                 </div>
+                <div class="form-group">
+    <label for="specialty">Specialty</label>
+    <select name="specialty" id="specialty" required>
+        <option value="" disabled selected>Select Specialty</option>
+        <option value="Cardiology">Cardiology</option>
+        <option value="Dermatology">Dermatology</option>
+        <option value="Pediatrics">Pediatrics</option>
+        <option value="Neurology">Neurology</option>
+        <option value="Orthopedics">Orthopedics</option>
+    </select>
+</div>
+
+
                 <div class="form-group account-type">
                     <label>Account Type:</label>
                     <label><input type="radio" name="account_type" value="Trainee" required> Trainee</label>
