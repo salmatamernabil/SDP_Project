@@ -2,7 +2,7 @@
 session_start();
 
 // Ensure searchResults uses allPatients if no search has been conducted
-$searchResults = $_SESSION['searchResults'] ?? $_SESSION['allPatients'] ?? [];
+$searchResults = $_SESSION['searchResults'] ?? $_SESSION['allPatientsForFollowUp'] ?? [];
 $searchQuery = $_SESSION['searchQuery'] ?? '';
 $reportFormat = $_SESSION['reportFormat'] ?? 'pdf';
 
@@ -180,30 +180,53 @@ error_log("View searchResults data: " . print_r($searchResults, true));
 
             <!-- Search Form -->
             <form action="../Controller/follow_up_controller.php" method="POST">
-                <div class="search-box">
-                    <label for="search">Search Patient:</label>
-                    <input type="text" id="search" name="search" value="<?php echo htmlspecialchars($searchQuery); ?>" placeholder="Enter surgery type or hospital name" required>
-                    <button type="submit" name="action" value="searchPatients">Search</button>
-                </div>
-            </form>
+    <div class="search-box">
+        <label for="search">Search Patient by Name:</label>
+        <input type="text" id="search" name="search" value="<?php echo htmlspecialchars($searchQuery); ?>" placeholder="Enter patient name" required>
+        <button type="submit" name="action" value="searchPatients">Search</button>
+    </div>
+</form>
+
 
             <!-- Display Patient Records -->
             <div class="patient-records">
-                <?php if (!empty($searchResults)): ?>
-                    <?php foreach ($searchResults as $patient): ?>
-                        <div class="record">
-                            <p><strong>Patient ID:</strong> <?php echo htmlspecialchars($patient['PatientId']); ?></p>
-                            <p><strong>Full Name:</strong> <?php echo htmlspecialchars($patient['FullName'] ?? 'N/A'); ?></p>
-                            <p><strong>Surgery Date:</strong> <?php echo htmlspecialchars($patient['SurgeryDate']); ?></p>
-                            <p><strong>Type of Surgery:</strong> <?php echo htmlspecialchars($patient['TypeOfSurgery']); ?></p>
-                            <p><strong>Hospital Name:</strong> <?php echo htmlspecialchars($patient['HospitalName']); ?></p>
-                            <p><strong>Member ID (MID):</strong> <?php echo htmlspecialchars($patient['MID']); ?></p>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <p>Please enter your query.</p>
-                <?php endif; ?>
+    <?php if (!empty($searchResults)): ?>
+        <?php foreach ($searchResults as $patient): ?>
+            <div class="record">
+              <!--  <p><strong>Patient ID:</strong> <?php echo htmlspecialchars($patient['PatientId']); ?></p> -->
+                <p><strong>Full Name:</strong> <?php echo htmlspecialchars($patient['FullName'] ?? 'N/A'); ?></p>
+                <p><strong>Birth Date:</strong> <?php echo htmlspecialchars($patient['BirthDate'] ?? 'N/A'); ?></p>
+                <p><strong>Gender:</strong> <?php echo htmlspecialchars($patient['Gender'] ?? 'N/A'); ?></p>
+                <p><strong>Mobile Number:</strong> <?php echo htmlspecialchars($patient['MobileNumber'] ?? 'N/A'); ?></p>
+                <p><strong>Surgery Date:</strong> <?php echo htmlspecialchars($patient['SurgeryDate'] ?? 'N/A'); ?></p>
+                <p><strong>Type of Surgery:</strong> <?php echo htmlspecialchars($patient['TypeOfSurgery'] ?? 'N/A'); ?></p>
+                <p><strong>Hospital Name:</strong> <?php echo htmlspecialchars($patient['HospitalName'] ?? 'N/A'); ?></p>
+                <p><strong>BMI Value:</strong> <?php echo htmlspecialchars($patient['bmi_value'] ?? 'N/A'); ?></p>
+                <p><strong>BMI Result:</strong> <?php echo htmlspecialchars($patient['result'] ?? 'N/A'); ?></p>
+                <p><strong>Functional Status:</strong> <?php echo htmlspecialchars($patient['functional_status'] ?? 'N/A'); ?></p>
+                <p><strong>Diabetes:</strong> <?php echo htmlspecialchars($patient['diabetes'] ?? 'N/A'); ?></p>
+                <p><strong>HbA1c:</strong> <?php echo htmlspecialchars($patient['habic'] ?? 'N/A'); ?></p>
+                <p><strong>Diabetes Duration:</strong> <?php echo htmlspecialchars($patient['diabetes_duration'] ?? 'N/A'); ?></p>
+                <p><strong>Hypertension:</strong> <?php echo htmlspecialchars($patient['hypertension'] ?? 'N/A'); ?></p>
+                <p><strong>Lipid Profile:</strong> <?php echo htmlspecialchars($patient['lipid_profile'] ?? 'N/A'); ?></p>
+                <p><strong>Reflux:</strong> <?php echo htmlspecialchars($patient['reflux'] ?? 'N/A'); ?></p>
+                <p><strong>Fatty Liver:</strong> <?php echo htmlspecialchars($patient['fatty_liver'] ?? 'N/A'); ?></p>
+                <p><strong>Gynecological Issues:</strong> <?php echo htmlspecialchars($patient['gynecological'] ?? 'N/A'); ?></p>
+                <p><strong>Surgery Type:</strong> <?php echo htmlspecialchars($patient['surgery_type'] ?? 'N/A'); ?></p>
+                <p><strong>Stapler Type:</strong> <?php echo htmlspecialchars($patient['stapler_type'] ?? 'N/A'); ?></p>
+                <p><strong>Number of Staplers:</strong> <?php echo htmlspecialchars($patient['number_of_staplers'] ?? 'N/A'); ?></p>
+                <p><strong>Comments:</strong> <?php echo htmlspecialchars($patient['comments'] ?? 'N/A'); ?></p>
+                <p><strong>Intraoperative Complications:</strong> <?php echo htmlspecialchars($patient['Intraoperative'] ?? 'N/A'); ?></p>
+                <p><strong>Postoperative Complications:</strong> <?php echo htmlspecialchars($patient['Postoperative'] ?? 'N/A'); ?></p>
+                <p><strong>Discharge Notes:</strong> <?php echo htmlspecialchars($patient['Discharge'] ?? 'N/A'); ?></p>
+                <p><strong>Number of Days:</strong> <?php echo htmlspecialchars($patient['NumberOfDays'] ?? 'N/A'); ?></p>
             </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <p>No patients found for the search query.</p>
+    <?php endif; ?>
+</div>
+
 
             <!-- Report Generation Dropdown and Button -->
             <form action="../Controller/follow_up_controller.php" method="POST">
