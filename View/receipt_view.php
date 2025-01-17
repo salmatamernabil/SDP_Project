@@ -2,17 +2,17 @@
 session_start();
 
 // Retrieve receipt data from session
-$receiptData = $_SESSION['receiptData'] ?? [
+$receiptData = $_SESSION['formData'] ?? [
     'name' => 'N/A',
     'email' => 'N/A',
     'phone' => 'N/A',
     'course' => 'N/A',
     'amount' => 'N/A',
-    'date' => date("Y-m-d")
 ];
 
 // Optional: Clear receipt data after displaying to prevent reuse
-unset($_SESSION['receiptData']);
+//unset($_SESSION['receiptData']);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -140,7 +140,7 @@ unset($_SESSION['receiptData']);
             <p><strong>Phone Number:</strong> <?php echo htmlspecialchars($receiptData['phone']); ?></p>
             <p><strong>Course Donated To:</strong> <?php echo htmlspecialchars($receiptData['course']); ?></p>
             <p><strong>Amount:</strong> EGP <?php echo htmlspecialchars($receiptData['amount']); ?></p>
-            <p><strong>Date:</strong> <?php echo htmlspecialchars($receiptData['date']); ?></p>
+            <p><strong>Date:</strong> <?php echo htmlspecialchars(date("Y-m-d")); ?></p>
         </div>
 
         <!-- Button to Download PDF -->
