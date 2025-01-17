@@ -1,8 +1,8 @@
 <?php
 session_start();
-
-// Retrieve the payment instance type and form data from the session, with defaults if not set
-$paymentInstanceType = $_SESSION['paymentInstanceType'] ?? null;
+unset($_SESSION['formData']);
+// Retrieve the form data and courses from the session
+$courses = $_SESSION['courses'] ?? [];
 $formData = $_SESSION['formData'] ?? [
     'name' => '',
     'email' => '',
@@ -20,7 +20,6 @@ unset($_SESSION['errors']); // Clear errors after displaying
     <meta charset="UTF-8">
     <title>Online Donation</title>
     <style>
-        /* [Your existing CSS styles here] */
         /* General Styling */
         body, html {
             margin: 0;
@@ -167,7 +166,6 @@ unset($_SESSION['errors']); // Clear errors after displaying
     </style>
 </head>
 <body>
-
     <!-- Navbar -->
     <div class="navbar">
         <a href="home_view.php" class="logo">Bravo</a>
@@ -176,8 +174,8 @@ unset($_SESSION['errors']); // Clear errors after displaying
     <!-- Content Section -->
     <div class="content">
         <div class="donation-container">
-            <h2>Online Donation</h2>
-            <form action="../Controller/donate_controller.php" method="POST">
+            <h2>Donation Details</h2>
+            <form action=../Controller/donate_controller.php method="POST">
                 <div class="form-group">
                     <input type="text" name="name" placeholder="Name" value="<?php echo htmlspecialchars($formData['name']); ?>" required>
                 </div>
@@ -189,100 +187,24 @@ unset($_SESSION['errors']); // Clear errors after displaying
                 </div>
                 <div class="form-group">
                     <select name="course" required>
-                        <option value="" disabled <?php echo ($formData['course'] === '') ? 'selected' : ''; ?>>Select a Course</option>
-                        <option value="Course A" <?php echo ($formData['course'] === 'Course A') ? 'selected' : ''; ?>>Course A</option>
-                        <option value="Course B" <?php echo ($formData['course'] === 'Course B') ? 'selected' : ''; ?>>Course B</option>
-                        <option value="Course C" <?php echo ($formData['course'] === 'Course C') ? 'selected' : ''; ?>>Course C</option>
+                        <option value="" disabled selected>Select a Course</option>
+                        <?php foreach ($courses as $course) : ?>
+                            <option value="<?php echo htmlspecialchars($course['course_id']); ?>">
+                                <?php echo htmlspecialchars($course['course_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group">
                     <input type="number" name="amount" placeholder="Amount (in EGP)" min="1" value="<?php echo htmlspecialchars($formData['amount']); ?>" required>
                 </div>
-                <!-- Payment Type Selection -->
-                <h2>Select Payment Method</h2>
-                <div class="payment-option">
-                    <input type="radio" name="paymentType" value="cash" id="cash" required <?php echo ($paymentInstanceType === 'cash') ? 'checked' : ''; ?>>
-                    <label for="cash">Cash</label>
-                </div>
-                <div class="payment-option">
-                    <input type="radio" name="paymentType" value="visa" id="visa" required <?php echo ($paymentInstanceType === 'visa') ? 'checked' : ''; ?>>
-                    <label for="visa">Visa</label>
-                </div>
-                <div class="payment-option">
-                    <input type="radio" name="paymentType" value="fawry" id="fawry" required <?php echo ($paymentInstanceType === 'fawry') ? 'checked' : ''; ?>>
-                    <label for="fawry">Fawry</label>
-                </div>
-
-                <!-- Payment Information Sections -->
-                <div id="payment-info-cash" class="payment-info" style="display: <?php echo ($paymentInstanceType === 'cash') ? 'block' : 'none'; ?>;">
-                    <h2>Complete Your Donation with Cash</h2>
-                    <p>Please visit our office or contact our representative to complete your donation in cash.</p>
-                </div>
-
-                <div id="payment-info-visa" class="payment-info" style="display: <?php echo ($paymentInstanceType === 'visa') ? 'block' : 'none'; ?>;">
-                    <h2>Complete Your Donation with Visa</h2>
-                    <div class="form-group">
-                        <label for="card-name">Name on Card</label>
-                        <input type="text" id="card-name" name="card_name" placeholder="John Doe">
-                    </div>
-                    <div class="form-group">
-                        <label for="card-number">Card Number</label>
-                        <input type="text" id="card-number" name="card_number" placeholder="1234 5678 9012 3456" maxlength="16">
-                    </div>
-                    <div class="form-group">
-                        <label for="expiry-date">Expiration Date</label>
-                        <input type="text" id="expiry-date" name="expiry_date" placeholder="MM/YY" maxlength="5">
-                    </div>
-                    <div class="form-group">
-                        <label for="cvv">CVV</label>
-                        <input type="number" id="cvv" name="cvv" placeholder="123" maxlength="3">
-                    </div>
-                </div>
-
-                <div id="payment-info-fawry" class="payment-info" style="display: <?php echo ($paymentInstanceType === 'fawry') ? 'block' : 'none'; ?>;">
-                    <h2>Complete Your Donation with Fawry</h2>
-                    <p>Use the following Fawry code at any Fawry outlet or online to complete your donation.</p>
-                    <p><strong>Fawry Code: 12345678</strong></p>
-                </div>
-
-                <button type="submit" name="finalizeDonation">Proceed with Donation</button>
+                <button type="submit" name="proceedToPayment">Proceed to Payment</button>
             </form>
         </div>
     </div>
+
     <div class="footer">
         <p>Contact Us: BRAVO@ngo.org | © 2024 Bravo</p>
     </div>
-
-    <!-- JavaScript to handle payment type change with AJAX -->
-    <script>
-    document.querySelectorAll('input[name="paymentType"]').forEach((radio) => {
-        radio.addEventListener('change', function() {
-            const paymentType = this.value;
-
-            // Send AJAX request to update payment type in the session
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "../Controller/donate_controller.php", true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4 && xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.status === 'success') {
-                        showPaymentInfo(paymentType);
-                    }
-                }
-            };
-            xhr.send("paymentType=" + paymentType + "&ajax=true");
-        });
-    });
-
-    function showPaymentInfo(paymentType) {
-        // Hide all payment info sections
-        document.querySelectorAll('.payment-info').forEach((section) => {
-            section.style.display = 'none';
-        });
-        // Show the selected payment info
-        document.getElementById('payment-info-' + paymentType).style.display = 'block';
-    }
-    </script>
 </body>
 </html>
