@@ -2,6 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+require '../Design Patterns/Template.php';
 require '../vendor/autoload.php';
 
 use PhpOffice\PhpWord\PhpWord;
@@ -13,94 +14,127 @@ interface FollowUpReportStrategy {
     public function generateReport($patients);
 }
 
-class PDFReportStrategy implements FollowUpReportStrategy {
-    public function generateReport($patients) {
-        header("Content-Type: application/pdf");
-        header("Content-Disposition: attachment; filename='FollowUpReport.pdf'");
-        header("Cache-Control: no-cache");
-        header("Pragma: no-cache");
+class PDFReportStrategy extends ReportTemplate implements FollowUpReportStrategy {
+    private $pdf;
 
-        $pdf = new FPDF();
-        $pdf->AddPage();
-        $pdf->SetFont('Arial', 'B', 16);
-        $pdf->Cell(0, 10, 'Patient Follow-Up Report', 0, 1, 'C');
-        $pdf->Ln(10);
+    protected function initializeReport() {
+        $this->pdf = new FPDF();
+        $this->pdf->AddPage();
+        $this->pdf->SetFont('Arial', 'B', 16);
+    }
 
+    
+    protected function addTitle() {
+        $this->pdf->Cell(0, 10, 'Patient Follow-Up Report', 0, 1, 'C');
+        $this->pdf->Ln(10);
+    }
+
+    protected function addPatientData($patients) {
         foreach ($patients as $patient) {
-            $pdf->SetFont('Arial', '', 12);
-            $pdf->Cell(40, 10, 'Patient ID: ' . $patient['PatientId']);
-            $pdf->Ln();
-            $pdf->Cell(40, 10, 'Surgery Date: ' . $patient['SurgeryDate']);
-            $pdf->Ln();
-            $pdf->Cell(40, 10, 'Type of Surgery: ' . $patient['TypeOfSurgery']);
-            $pdf->Ln();
-            $pdf->Cell(40, 10, 'Hospital Name: ' . $patient['HospitalName']);
-            $pdf->Ln();
-            $pdf->Cell(40, 10, 'Member ID (MID): ' . $patient['MID']);
-            $pdf->Ln(10);
+            $this->pdf->SetFont('Arial', '', 12);
+            foreach ($patient as $key => $value) {
+                $this->pdf->Cell(0, 10, "$key: " . ($value ?? 'N/A'), 0, 1);
+            }
+            $this->pdf->Ln();
         }
+    }
+    
 
-        $pdf->Output('D', 'FollowUpReport.pdf');
-        exit;
+    protected function finalizeReport() {
+        $this->pdf->Output('D', 'FollowUpReport.pdf');
+    }
+
+    public function generateReport($patients) {
+        $this->generateTemplate($patients); // Call Template Method
     }
 }
 
-class WordReportStrategy implements FollowUpReportStrategy {
-    public function generateReport($patients) {
-        $phpWord = new PhpWord();
-        $section = $phpWord->addSection();
-        
-        $section->addTitle("Patient Follow-Up Report", 1);
-        
-        foreach ($patients as $patient) {
-            $section->addText("Patient ID: " . $patient['PatientId']);
-            $section->addText("Surgery Date: " . $patient['SurgeryDate']);
-            $section->addText("Type of Surgery: " . $patient['TypeOfSurgery']);
-            $section->addText("Hospital Name: " . $patient['HospitalName']);
-            $section->addText("Member ID (MID): " . $patient['MID']);
-            $section->addTextBreak();
-        }
+class WordReportStrategy extends ReportTemplate implements FollowUpReportStrategy {
+    private $phpWord;
+    private $section;
 
-        $writer = IOFactory::createWriter($phpWord, 'Word2007');
-        $filename = 'FollowUpReport.docx';
-        
+    protected function initializeReport() {
+        $this->phpWord = new PhpWord();
+        $this->section = $this->phpWord->addSection();
+    }
+
+    protected function addTitle() {
+        $this->section->addTitle("Patient Follow-Up Report", 1);
+    }
+
+    protected function addPatientData($patients) {
+        foreach ($patients as $patient) {
+            foreach ($patient as $key => $value) {
+                $this->section->addText("$key: " . ($value ?? 'N/A'));
+            }
+            $this->section->addTextBreak();
+        }
+    }
+    
+
+    protected function finalizeReport() {
+        $writer = IOFactory::createWriter($this->phpWord, 'Word2007');
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header("Content-Disposition: attachment;filename=\"$filename\"");
+        header('Content-Disposition: attachment;filename="FollowUpReport.docx"');
         header('Cache-Control: max-age=0');
-        
         $writer->save('php://output');
     }
+
+    public function generateReport($patients) {
+        $this->generateTemplate($patients); // Call Template Method
+    }
 }
 
-class ExcelReportStrategy implements FollowUpReportStrategy {
-    public function generateReport($patients) {
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        
-        $sheet->setCellValue('A1', 'Patient ID');
-        $sheet->setCellValue('B1', 'Surgery Date');
-        $sheet->setCellValue('C1', 'Type of Surgery');
-        $sheet->setCellValue('D1', 'Hospital Name');
-        $sheet->setCellValue('E1', 'Member ID (MID)');
+class ExcelReportStrategy extends ReportTemplate implements FollowUpReportStrategy {
+    private $spreadsheet;
+    private $sheet;
 
+    protected function initializeReport() {
+        $this->spreadsheet = new Spreadsheet();
+        $this->sheet = $this->spreadsheet->getActiveSheet();
+        $this->sheet->setCellValue('A1', 'Patient ID');
+        $this->sheet->setCellValue('B1', 'Surgery Date');
+        $this->sheet->setCellValue('C1', 'Type of Surgery');
+    }
+
+    protected function addTitle() {
+        // Title logic can be skipped if headers already added in initializeReport
+    }
+
+    protected function addPatientData($patients) {
+        $headerSet = false;
         $row = 2;
+    
         foreach ($patients as $patient) {
-            $sheet->setCellValue("A$row", $patient['PatientId']);
-            $sheet->setCellValue("B$row", $patient['SurgeryDate']);
-            $sheet->setCellValue("C$row", $patient['TypeOfSurgery']);
-            $sheet->setCellValue("D$row", $patient['HospitalName']);
-            $sheet->setCellValue("E$row", $patient['MID']);
+            $col = 'A';
+    
+            if (!$headerSet) {
+                foreach (array_keys($patient) as $header) {
+                    $this->sheet->setCellValue($col . '1', $header);
+                    $col++;
+                }
+                $headerSet = true;
+            }
+    
+            $col = 'A';
+            foreach ($patient as $value) {
+                $this->sheet->setCellValue($col . $row, $value ?? 'N/A');
+                $col++;
+            }
             $row++;
         }
+    }
+    
 
-        $writer = new Xlsx($spreadsheet);
-        $filename = 'FollowUpReport.xlsx';
-        
+    protected function finalizeReport() {
+        $writer = new Xlsx($this->spreadsheet);
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header("Content-Disposition: attachment;filename=\"$filename\"");
-        header('Cache-Control: max-age=0');
-        
+        header('Content-Disposition: attachment;filename="FollowUpReport.xlsx"');
         $writer->save('php://output');
+    }
+
+    public function generateReport($patients) {
+        $this->generateTemplate($patients); // Call Template Method
     }
 }
 
