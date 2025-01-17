@@ -11,21 +11,196 @@ class FollowUpModel {
         }
     }
 
-    // Retrieve all patients from the database with full name from member table
-   public function getPatients() {
-    $query = "SELECT p.*, m.FullName FROM patient p INNER JOIN member m ON p.MID = m.MemberID"; // Adjust column names if needed
-    $result = $this->conn->query($query);
-    
-    $patients = [];
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $patients[] = $row;
+
+     /**
+     * Retrieve the latest follow-up data for a specific patient.
+     *
+     * @param int $patientId The ID of the patient.
+     * @return array The follow-up data for the patient.
+     */
+    public function getFollowUpDataByPatientId($patientId) {
+        error_log("PatientId received: " . $patientId);
+              
+        if (!$this->conn) {
+            error_log("Database connection is null or not initialized.");
+            throw new Exception("Database connection is not established.");
         }
+       
+        $sqlTest = "SELECT 1";
+        if (!$this->conn->query($sqlTest)) {
+            error_log("Database connection test failed: " . $this->conn->error);
+            throw new Exception("Database connection test failed: " . $this->conn->error);
+        }
+        $query = "
+        WITH LatestBMI AS (
+            SELECT patient_id, MAX(bmi_id) AS latest_bmi_id
+            FROM patient_bmi
+            GROUP BY patient_id
+        ),
+        LatestComorbidity AS (
+            SELECT patient_id, MAX(comorbidity_id) AS latest_comorbidity_id
+            FROM comorbidity
+            GROUP BY patient_id
+        ),
+        LatestSurgeryTypes AS (
+            SELECT patient_id, MAX(id) AS latest_surgery_type_id
+            FROM surgery_types
+            GROUP BY patient_id
+        ),
+        LatestComplications AS (
+            SELECT PatientId, MAX(ComplicationId) AS latest_complication_id
+            FROM patient_complcation
+            GROUP BY PatientId
+        )
+        SELECT 
+            p.PatientId, 
+            m.FullName, 
+            m.BirthDate, 
+            m.Gender, 
+            m.MobileNumber,
+            p.SurgeryDate, 
+            p.TypeOfSurgery, 
+            p.HospitalName,
+            bmi.bmi_value, 
+            bmi.result,
+            com.functional_status, 
+            com.diabetes, 
+            com.habic, 
+            com.diabetes_duration, 
+            com.hypertension, 
+            com.lipid_profile, 
+            com.reflux, 
+            com.fatty_liver, 
+            com.gynecological,
+            types.surgery_type, 
+            types.stapler_type, 
+            types.number_of_staplers, 
+            types.comments,
+            comp.Intraoperative, 
+            comp.Postoperative, 
+            comp.Discharge, 
+            comp.NumberOfDays
+        FROM patient p
+        INNER JOIN member m ON p.MID = m.MemberID
+        LEFT JOIN LatestBMI lbmi ON p.PatientId = lbmi.patient_id
+        LEFT JOIN patient_bmi bmi ON bmi.bmi_id = lbmi.latest_bmi_id
+        LEFT JOIN LatestComorbidity lcom ON p.PatientId = lcom.patient_id
+        LEFT JOIN comorbidity com ON com.comorbidity_id = lcom.latest_comorbidity_id
+        LEFT JOIN LatestSurgeryTypes ltypes ON p.PatientId = ltypes.patient_id
+        LEFT JOIN surgery_types types ON types.id = ltypes.latest_surgery_type_id
+        LEFT JOIN LatestComplications lcomp ON p.PatientId = lcomp.PatientId
+        LEFT JOIN patient_complcation comp ON comp.ComplicationId = lcomp.latest_complication_id
+        WHERE p.PatientId = ?
+        GROUP BY 
+            p.PatientId, m.FullName, m.BirthDate, m.Gender, m.MobileNumber,
+            p.SurgeryDate, p.TypeOfSurgery, p.HospitalName,
+            bmi.bmi_value, bmi.result,
+            com.functional_status, com.diabetes, com.habic, com.diabetes_duration, 
+            com.hypertension, com.lipid_profile, com.reflux, com.fatty_liver, com.gynecological,
+            types.surgery_type, types.stapler_type, types.number_of_staplers, types.comments,
+            comp.Intraoperative, comp.Postoperative, comp.Discharge, comp.NumberOfDays;
+                
+                
+              ";
+              $stmt = $this->conn->prepare($query);
+              $stmt->bind_param("i", $patientId);
+              $stmt->execute();
+              $result = $stmt->get_result();
+              if ($result) {
+                  $data = $result->fetch_all(MYSQLI_ASSOC);
+                  error_log("Query Result: " . print_r($data, true));
+                  return $data;
+              } else {
+                  error_log("Query failed or returned no results.");
+                  return [];
+              }
+              
     }
-
-    return $patients;
-}
-
+    
+    // Retrieve all patients from the database with full name from member table
+    public function getPatients() {
+        $query = "
+       WITH LatestBMI AS (
+    SELECT patient_id, MAX(bmi_id) AS latest_bmi_id
+    FROM patient_bmi
+    GROUP BY patient_id
+),
+LatestComorbidity AS (
+    SELECT patient_id, MAX(comorbidity_id) AS latest_comorbidity_id
+    FROM comorbidity
+    GROUP BY patient_id
+),
+LatestSurgeryTypes AS (
+    SELECT patient_id, MAX(id) AS latest_surgery_type_id
+    FROM surgery_types
+    GROUP BY patient_id
+),
+LatestComplications AS (
+    SELECT PatientId, MAX(ComplicationId) AS latest_complication_id
+    FROM patient_complcation
+    GROUP BY PatientId
+)
+SELECT 
+    p.PatientId, 
+    m.FullName, 
+    m.BirthDate, 
+    m.Gender, 
+    m.MobileNumber,
+    p.SurgeryDate, 
+    p.TypeOfSurgery, 
+    p.HospitalName,
+    bmi.bmi_value, 
+    bmi.result,
+    com.functional_status, 
+    com.diabetes, 
+    com.habic, 
+    com.diabetes_duration, 
+    com.hypertension, 
+    com.lipid_profile, 
+    com.reflux, 
+    com.fatty_liver, 
+    com.gynecological,
+    types.surgery_type, 
+    types.stapler_type, 
+    types.number_of_staplers, 
+    types.comments,
+    comp.Intraoperative, 
+    comp.Postoperative, 
+    comp.Discharge, 
+    comp.NumberOfDays
+FROM patient p
+INNER JOIN member m ON p.MID = m.MemberID
+LEFT JOIN LatestBMI lbmi ON p.PatientId = lbmi.patient_id
+LEFT JOIN patient_bmi bmi ON bmi.bmi_id = lbmi.latest_bmi_id
+LEFT JOIN LatestComorbidity lcom ON p.PatientId = lcom.patient_id
+LEFT JOIN comorbidity com ON com.comorbidity_id = lcom.latest_comorbidity_id
+LEFT JOIN LatestSurgeryTypes ltypes ON p.PatientId = ltypes.patient_id
+LEFT JOIN surgery_types types ON types.id = ltypes.latest_surgery_type_id
+LEFT JOIN LatestComplications lcomp ON p.PatientId = lcomp.PatientId
+LEFT JOIN patient_complcation comp ON comp.ComplicationId = lcomp.latest_complication_id
+GROUP BY 
+    p.PatientId, m.FullName, m.BirthDate, m.Gender, m.MobileNumber,
+    p.SurgeryDate, p.TypeOfSurgery, p.HospitalName,
+    bmi.bmi_value, bmi.result,
+    com.functional_status, com.diabetes, com.habic, com.diabetes_duration, 
+    com.hypertension, com.lipid_profile, com.reflux, com.fatty_liver, com.gynecological,
+    types.surgery_type, types.stapler_type, types.number_of_staplers, types.comments,
+    comp.Intraoperative, comp.Postoperative, comp.Discharge, comp.NumberOfDays;
+        
+        
+        
+        ";
+        $result = $this->conn->query($query);
+    
+        $patients = [];
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $patients[] = $row;
+            }
+        }
+        return $patients;
+    }
+    
 
     // Create a new patient record and related member record
     public function createPatient($data) {
@@ -148,27 +323,7 @@ class FollowUpModel {
 
 
 
-    public function __destruct() {
-        $this->conn->close();
-    }
 }
 
 
-//  $model = new FollowUpModel();
-//   $patients = $model->getPatients();
-
-//   if (!empty($patients)) {
-//       echo "<h2>Retrieved Patients:</h2>";
-//       foreach ($patients as $patient) {
-//     echo "Patient NAME: " . htmlspecialchars($patient['FullName']) . "<br>";
-//           echo "Patient ID: " . htmlspecialchars($patient['PatientId']) . "<br>";
-// //          echo "Surgery Date: " . htmlspecialchars($patient['SurgeryDate']) . "<br>";
-// //          echo "Type of Surgery: " . htmlspecialchars($patient['TypeOfSurgery']) . "<br>";
-// //          echo "Hospital Name: " . htmlspecialchars($patient['HospitalName']) . "<br>";
-// //          echo "Member ID (MID): " . htmlspecialchars($patient['MID']) . "<br>";
-// //          echo "----------------------<br>";
-// }
-// } else {
-// //      echo "No patients found or failed to retrieve patients.";
-//  }
 // ?>
