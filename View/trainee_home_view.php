@@ -170,9 +170,9 @@
             
             </a>
         </div>
-        <a href="all_courses.php">See All Courses</a>
-        <a href="doctor.php">Enroll in Course</a>
-        <a href="course_details.php">See Course Details</a>
+        <a href="Enroll_course_view.php">See All Courses</a>
+        <a href="Enroll_course_view.php">Enroll in Course</a>
+        <a href="Enroll_course_view.php">See Course Details</a>
         <a href="home_view.php">Logout</a>
     </div>
 
