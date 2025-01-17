@@ -16,7 +16,7 @@ class SignInController {
 
         // Attempt to sign in the user
         $user = $this->signInModel->signIn($username, $password);
-
+     
         if ($user === 'pending') {
             // Handle pending users
             error_log("User $username is pending approval.");
