@@ -2,11 +2,14 @@
 require_once '../Helper FIles/my_database.php';
 require_once '../Design Patterns/Observer.php';
 require_once '../Design Patterns/Decorater.php';
+require_once '../Design Patterns/Iterator.php';
+require_once '../Design Patterns/Proxy.php';
 
 class AdminModel implements IObserver {
     private $conn;
     private $currentAdminInstance;
 
+    
 
     public function __construct() {
         // Start session if not already started
@@ -19,36 +22,66 @@ class AdminModel implements IObserver {
             die("Database connection failed: " . $this->conn->connect_error);
         }
 
-        // Initialize currentAdminInstance
-        if (isset($_SESSION['admin_id'])) {
-            $adminId = $_SESSION['admin_id'];
-            $adminInstance = $this->getAdminInstanceById($adminId);
-            if ($adminInstance) {
-                $this->currentAdminInstance = $adminInstance;
-            } else {
-                // Default to BaseAdmin if not found
-                $this->currentAdminInstance = new BaseAdmin();
-            }
-        } else {
-            // Default to BaseAdmin if no admin_id in session
-            $this->currentAdminInstance = new BaseAdmin();
-        }
+      
+
+        $this->currentAdminInstance = null;
     }
 
     // Method to set the current admin instance
-    public function setCurrentAdminInstance($adminInstance) {
+     public function setCurrentAdminInstance($adminInstance) {
         $this->currentAdminInstance = $adminInstance;
     }
 
-    // Method to get the current admin instance
-    public function getCurrentAdminInstance() {
-        return $this->currentAdminInstance;
+
+    public function getAdminEmail($adminId) {
+        // Prepare the SQL query to retrieve the admin's email
+        $query = "SELECT email FROM admin WHERE admin_id = ?";
+        $stmt = $this->conn->prepare($query);
+        if ($stmt) {
+            $stmt->bind_param("i", $adminId);
+            $stmt->execute();
+            $result = $stmt->get_result();
+    
+            if ($result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                return $row['email']; // Return the email address
+            } else {
+                error_log("Admin email not found for admin ID: $adminId.");
+            }
+    
+            $stmt->close();
+        } else {
+            error_log("Failed to prepare statement for fetching admin email.");
+        }
+    
+        return null; // Return null if email is not found
+    }
+    
+    public function getAllAdminEmails() {
+        // Prepare the SQL query to retrieve all admin emails
+        $query = "SELECT email FROM admin";
+        $stmt = $this->conn->prepare($query);
+    
+        $emails = [];
+        if ($stmt) {
+            $stmt->execute();
+            $result = $stmt->get_result();
+    
+            while ($row = $result->fetch_assoc()) {
+                $emails[] = $row['email'];
+            }
+    
+            $stmt->close();
+        } else {
+            error_log("Failed to prepare statement for fetching all admin emails.");
+        }
+    
+        return $emails; // Return the array of admin emails
     }
 
-    // Rest of your methods...
-
+    
     public function getAdminInstanceById($adminId) {
-        $query = "SELECT admin_id, username, role FROM admin WHERE admin_id = ?";
+        $query = "SELECT admin_id, role FROM admin WHERE admin_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $adminId);
         $stmt->execute();
@@ -57,19 +90,23 @@ class AdminModel implements IObserver {
         if ($result->num_rows > 0) {
             $row = $result->fetch_assoc();
             $role = $row['role'];
-    
-            // Instantiate the admin object based on the role
-            $adminInstance = new BaseAdmin(); // Start with BaseAdmin
-            if ($role === 'SuperAdmin') {
-                $adminInstance = new SuperAdmin($adminInstance);
-            } elseif ($role === 'ChiefAdmin') {
-                $adminInstance = new ChiefAdmin($adminInstance);
+            error_log("Retrieved role for admin ID $adminId: $role"); // Debug log
+            switch ($role) {
+                case 'SuperAdmin':
+                    return new SuperAdmin(new BaseAdmin());
+                case 'ChiefAdmin':
+                    return new ChiefAdmin(new BaseAdmin());
+                case 'DonationAdmin':
+                    return new DonationAdmin(new BaseAdmin());
+                case 'PaymentAdmin':
+                    return new PaymentAdmin(new BaseAdmin());
+                default:
+                    return new BaseAdmin();
             }
-    
-            return $adminInstance;
         }
-        return null; // Return null if admin not found
+        return new BaseAdmin(); // Default instance if no result is found
     }
+    
 
 
     // Update method from the IObserver interface
@@ -87,93 +124,9 @@ class AdminModel implements IObserver {
         }
         $_SESSION['notification_count'] += 1;
     }
-    // Consolidated function to upgrade, wrap, and log
-    // Upgrade admin's role, wrap with decorators, and log the action
-    // Consolidated function to upgrade, wrap, and log
-    public function upgradeAdminRole($adminId) {
-        // Step 1: Retrieve the current role and instance from the database
-        $query = "SELECT role FROM admin WHERE admin_id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $adminId);
-        $stmt->execute();
-        $result = $stmt->get_result();
 
-        
-    
-
-        if ($result->num_rows > 0) {
-            $row = $result->fetch_assoc();
-            $currentRole = $row['role'];
-
-            // Step 2: Retrieve the existing instance
-            $existingAdminInstance = $this->getAdminInstanceById($adminId);
-            
-            if (!$existingAdminInstance) {
-                throw new Exception("Admin instance not found for ID: $adminId");
-            }
-            
-            // Step 3: Determine the new role and apply the appropriate decorator
-            $newRole = null;
-            if ($currentRole === 'BaseAdmin') {
-                $existingAdminInstance = new SuperAdmin($existingAdminInstance);
-                $newRole = 'SuperAdmin';
-            } elseif ($currentRole === 'SuperAdmin') {
-                $existingAdminInstance = new ChiefAdmin($existingAdminInstance);
-                $newRole = 'ChiefAdmin';
-            } else {
-                return false; // Already ChiefAdmin or unsupported role
-            }
-
-            // Update the current admin instance for potential future use
-            $this->setCurrentAdminInstance($existingAdminInstance);
-
-            // Step 4: Update the role in the `admin` table
-            $updateRoleQuery = "UPDATE admin SET role = ? WHERE admin_id = ?";
-            $updateStmt = $this->conn->prepare($updateRoleQuery);
-            $updateStmt->bind_param("si", $newRole, $adminId);
-            $updateStmt->execute();
-
-            // Step 5: Insert into `upgrade_admin` to log the upgrade action
-            $upgradingAdminId = $_SESSION['admin_id'];
-            $insertUpgradeQuery = "INSERT INTO upgrade_admin (admin_id, new_role) VALUES (?, ?)";
-            $insertUpgradeStmt = $this->conn->prepare($insertUpgradeQuery);
-            $insertUpgradeStmt->bind_param("is", $upgradingAdminId, $newRole);
-            $insertUpgradeStmt->execute();
-            $upgradeId = $this->conn->insert_id;
-
-            // Step 6: Insert into `upgrade_admin_detail` to record the specific admin that was upgraded
-            $detailDescription = "Upgraded admin with ID: $adminId to new role: $newRole";
-            $insertDetailQuery = "INSERT INTO upgrade_admin_detail (upgrade_id, upgraded_admin_id, detail_description) VALUES (?, ?, ?)";
-            $insertDetailStmt = $this->conn->prepare($insertDetailQuery);
-            $insertDetailStmt->bind_param("iis", $upgradeId, $adminId, $detailDescription);
-            $insertDetailStmt->execute();
-
-            // Return the upgraded instance for further operations
-            return $existingAdminInstance;
-        }
-
-        return null;
-    }
-
-// Fetch all pending accounts
-    public function getPendingAccounts($adminId) {
-        $query = "SELECT * FROM pending_members WHERE admin_id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $adminId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $pendingAccounts = [];
-    
-        while ($row = $result->fetch_assoc()) {
-            $pendingAccounts[] = $row;
-        }
-    
-        return $pendingAccounts;
-    }
-    
-
-       // Method to get the current role of an admin by their ID
-       public function getCurrentAdminRole($adminId) {
+    // Method to get the current role of an admin by their ID
+    public function getCurrentAdminRole($adminId) {
         $query = "SELECT role FROM admin WHERE admin_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $adminId);
@@ -187,14 +140,245 @@ class AdminModel implements IObserver {
         return null; // Return null if no role is found
     }
 
-    public function getUpgradeableAdmins($currentAdminId) {
-        $query = "SELECT admin_id, username, role FROM admin WHERE role != 'ChiefAdmin' AND admin_id != ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $currentAdminId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
+    // Consolidated function to upgrade, wrap, and log
+    // Upgrade admin's role, wrap with decorators, and log the action
+    // Consolidated function to upgrade, wrap, and log
+    public function upgradeAdminRole($adminId) {
+        // 1. Get the current admin's role/class (e.g. 'BaseAdmin', 'SuperAdmin', 'ChiefAdmin')
+        $adminInstance = $this->getCurrentAdminInstance();
+        $adminRole     = get_class($adminInstance);
+    
+        // 2. Create a DBProxy with the current admin role
+        $dbProxy = new DBProxy($adminRole);
+    
+        // -----------------------------
+        // STEP 1: SELECT current role
+        // -----------------------------
+        $query  = "SELECT role FROM admin WHERE admin_id = ?";
+        $result = $dbProxy->executeQuery($query, [$adminId]);
+    
+        // Check if DBProxy returned an error or a denial
+        if (is_string($result)) {
+            // "Access Denied" or some other error message
+            error_log("[ERROR] upgradeAdminRole() - $result");
+            return null;
+        }
+    
+        // If the query fails or returns no rows
+        if (!$result || $result->num_rows === 0) {
+            return null; // No matching admin record
+        }
+    
+        // Fetch the current role
+        $row         = $result->fetch_assoc();
+        $currentRole = $row['role'];
+    
+        // -----------------------------
+        // STEP 2: Retrieve the existing instance
+        // (Uses your existing getAdminInstanceById method)
+        // -----------------------------
+        $existingAdminInstance = $this->getAdminInstanceById($adminId);
+        if (!$existingAdminInstance) {
+            throw new Exception("Admin instance not found for ID: $adminId");
+        }
+    
+        // -----------------------------
+        // STEP 3: Apply the appropriate decorator
+        // -----------------------------
+        $newRole = null;
+        if ($currentRole === 'BaseAdmin') {
+            $existingAdminInstance = new SuperAdmin($existingAdminInstance);
+            $newRole = 'SuperAdmin';
+        } elseif ($currentRole === 'SuperAdmin') {
+            $existingAdminInstance = new ChiefAdmin($existingAdminInstance);
+            $newRole = 'ChiefAdmin';
+        } else {
+            // Already ChiefAdmin or unsupported role
+            return false;
+        }
+    
+        // Update the current admin instance for future use
+        $this->setCurrentAdminInstance($existingAdminInstance);
+    
+        // -----------------------------
+        // STEP 4: Update the `admin` table
+        // -----------------------------
+        $updateRoleQuery = "UPDATE admin SET role = ? WHERE admin_id = ?";
+        $updateResult     = $dbProxy->executeQuery($updateRoleQuery, [$newRole, $adminId]);
+    
+        if (is_string($updateResult) || $updateResult === false) {
+            // Handle error or access denied
+            error_log("[ERROR] Failed to update role in admin table.");
+            return null;
+        }
+    
+        // -----------------------------
+        // STEP 5: Insert into `upgrade_admin` table
+        // -----------------------------
+        $upgradingAdminId    = $_SESSION['admin_id']; // The admin performing the upgrade
+        $insertUpgradeQuery  = "INSERT INTO upgrade_admin (admin_id, new_role) VALUES (?, ?)";
+        $insertUpgradeResult = $dbProxy->executeQuery($insertUpgradeQuery, [$upgradingAdminId, $newRole]);
+    
+        if (is_string($insertUpgradeResult) || $insertUpgradeResult === false) {
+            error_log("[ERROR] Failed to insert into upgrade_admin table.");
+            return null;
+        }
+    
+        // Get the newly inserted upgrade ID (last insert)
+        // With DBProxy, you need a separate SELECT:
+        $lastIdResult = $dbProxy->executeQuery("SELECT LAST_INSERT_ID()");
+        if (!$lastIdResult || is_string($lastIdResult)) {
+            error_log("[ERROR] Could not fetch LAST_INSERT_ID() for upgrade_admin.");
+            return null;
+        }
+        $lastIdRow = $lastIdResult->fetch_assoc();
+        $upgradeId = $lastIdRow["LAST_INSERT_ID()"];
+    
+        // -----------------------------
+        // STEP 6: Insert into `upgrade_admin_detail`
+        // -----------------------------
+        $detailDescription  = "Upgraded admin with ID: $adminId to new role: $newRole";
+        $insertDetailQuery  = "INSERT INTO upgrade_admin_detail (upgrade_id, upgraded_admin_id, detail_description) 
+                               VALUES (?, ?, ?)";
+        $insertDetailResult = $dbProxy->executeQuery(
+            $insertDetailQuery,
+            [$upgradeId, $adminId, $detailDescription]
+        );
+    
+        if (is_string($insertDetailResult) || $insertDetailResult === false) {
+            error_log("[ERROR] Failed to insert into upgrade_admin_detail table.");
+            return null;
+        }
+    
+        // Return the upgraded instance
+        return $existingAdminInstance;
     }
+    
+// Fetch all pending accounts
+    // In AdminController.php
+public function getPendingAccounts($adminId) {
+    $_SESSION['logs'][] = "Fetching pending accounts for admin ID: $adminId.";
+    error_log("[DEBUG] AdminController - Fetching pending accounts for admin ID: $adminId");
+
+    // Fetch Admin instance based on the session admin_id
+    $admin = $this->getAdminInstanceById($adminId);  // Retrieve the Admin object from the database
+    if (!$admin) {
+        $_SESSION['logs'][] = "Error: Admin instance not found for admin ID: $adminId.";
+        error_log("[ERROR] AdminController - Admin instance not found for admin ID: $adminId.");
+        return [];  // Return empty if admin instance is not found
+    }
+  
+    // Create a DBProxy instance with the role from the Admin object (role is automatically retrieved from Admin instance)
+    $admin = $this->getCurrentAdminInstance(); // Ensure this returns an instance like ChiefAdmin, SuperAdmin, or BaseAdmin
+    
+    // Get the role from the admin instance
+    $adminRole = get_class($admin); // This will give you the class name, e.g., 'ChiefAdmin'
+    
+    // Log the role to see which role is being passed
+    $_SESSION['logs'][] = "[INFO] Admin role: $adminRole";
+    error_log("[INFO] Admin role: $adminRole");
+   // Create a DBProxy instance with the admin role
+
+   // Create a DBProxy instance with the admin role
+$dbProxy = new DBProxy($adminRole);
+
+// Prepare the query with a placeholder for admin_id
+$query = "SELECT * FROM pending_members WHERE admin_id = ?";
+
+// Log the query execution
+$_SESSION['logs'][] = "[INFO] Executing query: $query with admin ID: {$_SESSION['admin_id']}";
+error_log("[INFO] Executing query: $query with admin ID: {$_SESSION['admin_id']}");
+
+// Call executeQuery with the parameters (passing the actual parameter value)
+$pendingAccounts = $dbProxy->executeQuery($query, [$_SESSION['admin_id']]);
+
+// Check if access was denied or successful
+if (is_string($pendingAccounts)) {
+    $_SESSION['logs'][] = "[ERROR] Error executing query: $pendingAccounts";
+    error_log("[ERROR] Error executing query: $pendingAccounts");
+} else {
+    $_SESSION['logs'][] = "[INFO] Successfully retrieved pending accounts.";
+    error_log("[INFO] Successfully retrieved pending accounts.");
+}
+
+
+    
+
+    if (is_string($pendingAccounts)) {
+        $_SESSION['logs'][] = "Error: " . $pendingAccounts;  // Access denied message from DBProxy
+        return [];
+    }
+
+    $_SESSION['logs'][] = "[DEBUG] AdminController - Pending accounts fetched successfully.";
+    return $pendingAccounts;
+}
+
+
+public function getPendingAccountsIterator($adminId): PendingAccountsIterator {
+    $result = $this->getPendingAccounts($adminId);
+
+    // Convert mysqli_result to array if needed
+    $accounts = [];
+    if ($result instanceof mysqli_result) {
+        while ($row = $result->fetch_assoc()) {
+            $accounts[] = $row;
+        }
+    }
+
+    // Return the iterator with the array of accounts
+    return new PendingAccountsIterator($accounts);
+}
+
+
+
+    
+
+       // Method to get the current role of an admin by their ID
+       public function getCurrentAdminInstance() {
+        if (!$this->currentAdminInstance) {
+            if (isset($_SESSION['admin_id'])) {
+                $adminId = $_SESSION['admin_id'];
+                error_log("Fetching admin instance for admin ID: $adminId"); // Debug log
+                $this->currentAdminInstance = $this->getAdminInstanceById($adminId);
+            } else {
+                error_log("No admin ID in session. Defaulting to BaseAdmin."); // Debug log
+                $this->currentAdminInstance = new BaseAdmin(); // Default if no admin ID is set
+            }
+        }
+        return $this->currentAdminInstance;
+    }
+
+    public function getUpgradeableAdmins($currentAdminId) {
+        // 1. Determine the current admin's role. We assume you already have:
+        //    $this->getCurrentAdminInstance() => returns BaseAdmin, SuperAdmin, or ChiefAdmin
+        $adminInstance = $this->getCurrentAdminInstance();
+        $adminRole     = get_class($adminInstance); // e.g., 'BaseAdmin', 'SuperAdmin', 'ChiefAdmin'
+        
+        // 2. Create a DBProxy using the current role
+        $dbProxy = new DBProxy($adminRole);
+    
+        // 3. Build your query
+        $query = "SELECT admin_id, username, role FROM admin WHERE role != 'ChiefAdmin' AND role != 'PaymentAdmin' AND  role != 'DonationAdmin' AND admin_id != ?";
+    
+        // 4. Execute the query through DBProxy
+        $result = $dbProxy->executeQuery($query, [$currentAdminId]);
+    
+        // If DBProxy returns a string, it's likely "Access Denied" or an error message
+        if (is_string($result)) {
+            // You can log or handle the error as you wish
+            error_log("[ERROR] getUpgradeableAdmins: $result");
+            return []; // Return empty or handle differently
+        }
+    
+        // 5. Convert the mysqli_result to an associative array
+        if ($result instanceof mysqli_result) {
+            return $result->fetch_all(MYSQLI_ASSOC);
+        }
+    
+        // If something else happens, return empty array
+        return [];
+    }
+    
 
     public function getAdminById($adminId) {
         $query = "SELECT admin_id, username, role FROM admin WHERE admin_id = ?";
@@ -233,107 +417,101 @@ class AdminModel implements IObserver {
     
 // Approve an account
 public function approveAccount($username) {
-    // Retrieve user details from `pending_members`
-    $selectQuery = "SELECT * FROM pending_members WHERE username = ?";
-    $selectStmt = $this->conn->prepare($selectQuery);
-    if ($selectStmt) {
-        $selectStmt->bind_param("s", $username);
-        $selectStmt->execute();
-        $result = $selectStmt->get_result();
-        $user = $result->fetch_assoc();
-        $selectStmt->close();
+    $_SESSION['logs'][] = "Attempting to approve account for username: $username.";
+    error_log("[INFO] Attempting to approve account for username: $username.");
 
-        if ($user) {
-            // Insert into `member` table
-            $insertMemberQuery = "INSERT INTO member (FullName, BirthDate, Gender, MobileNumber) VALUES (?, ?, ?, ?)";
-            $insertMemberStmt = $this->conn->prepare($insertMemberQuery);
-            if ($insertMemberStmt) {
-                $insertMemberStmt->bind_param("ssss", $user['FullName'], $user['BirthDate'], $user['Gender'], $user['MobileNumber']);
-                if ($insertMemberStmt->execute()) {
-                    $memberId = $this->conn->insert_id; // Get the new MemberID
+    $admin = $this->getCurrentAdminInstance();
+    $_SESSION['logs'][] = "Current admin role: " . get_class($admin);
+    error_log("[INFO] Current admin role: " . get_class($admin));
 
-                    // Determine account type and insert into respective table
-                    $accountType = strtolower($user['account_type']);
-                    $insertSpecificTable = null;
+    $dbProxy = new DBProxy(get_class($admin)); // Use the role/class name
 
-                    if ($accountType === 'doctor') {
-                        $insertSpecificTable = "INSERT INTO doctor (MemberID, Username, Email, Password, Specialty) VALUES (?, ?, ?, ?, ?)";
-                    } elseif ($accountType === 'trainee') {
-                        $insertSpecificTable = "INSERT INTO trainee (MemberID, Username, Email, Password, Specialty) VALUES (?, ?, ?, ?, ?)";
-                    }
-                    
-                    if ($insertSpecificTable) {
-                        $specificStmt = $this->conn->prepare($insertSpecificTable);
-                        $specificStmt->bind_param(
-                            "issss",
-                            $memberId,
-                            $user['username'],
-                            $user['email'],
-                            $user['password'], // Assuming the password is already hashed
-                            $user['Specialty']
-                        );
-                    
-                        if (!$specificStmt->execute()) {
-                            throw new Exception("Failed to insert into {$accountType} table: " . $specificStmt->error);
-                        }
-                    
-                        $specificStmt->close();
-                    }
-                    
 
-                    // Log the approval in `approve_account_member`
-                    $adminId = $_SESSION['admin_id']; // Assuming the admin's ID is stored in the session
-                    $insertApproveQuery = "INSERT INTO approve_account_member (admin_id) VALUES (?)";
-                    $insertApproveStmt = $this->conn->prepare($insertApproveQuery);
-                    $insertApproveStmt->bind_param("i", $adminId);
-                    if (!$insertApproveStmt->execute()) {
-                        throw new Exception("Failed to insert into approve_account_member");
-                    }
-                    $approveId = $this->conn->insert_id; // Get the newly created approve_id
-                    $insertApproveStmt->close();
-
-                    // Log details in `approve_account_member_detail`
-                    $detailDescription = "Approved account for user: $username";
-                    $insertDetailQuery = "INSERT INTO approve_account_member_detail (approve_id, doctor_id, trainee_id, detail_description) VALUES (?, ?, ?, ?)";
-                    $insertDetailStmt = $this->conn->prepare($insertDetailQuery);
-
-                    $doctorId = ($accountType === 'doctor') ? $memberId : null;
-                    $traineeId = ($accountType === 'trainee') ? $memberId : null;
-                    $insertDetailStmt->bind_param("iiis", $approveId, $doctorId, $traineeId, $detailDescription);
-
-                    if (!$insertDetailStmt->execute()) {
-                        throw new Exception("Failed to insert into approve_account_member_detail");
-                    }
-                    $insertDetailStmt->close();
-
-                    // Delete the user from `pending_members`
-                    $deleteQuery = "DELETE FROM pending_members WHERE username = ?";
-                    $deleteStmt = $this->conn->prepare($deleteQuery);
-                    if ($deleteStmt) {
-                        $deleteStmt->bind_param("s", $username);
-                        if ($deleteStmt->execute()) {
-                            error_log("Account for username {$username} deleted from pending_members.");
-                        } else {
-                            error_log("Failed to delete username {$username} from pending_members.");
-                        }
-                        $deleteStmt->close();
-                    }
-
-                    return true; // Successfully approved
-                } else {
-                    error_log("Failed to insert username {$username} into member.");
-                }
-                $insertMemberStmt->close();
-            }
-        } else {
-            error_log("User {$username} not found in pending_members.");
-        }
-    } else {
-        error_log("Failed to prepare select statement for username {$username}.");
+    // Fetch user from pending_members
+    $user = $dbProxy->executeQuery("SELECT * FROM pending_members WHERE username = ?", [$username])->fetch_assoc();
+    
+    if (!$user) {
+        $_SESSION['logs'][] = "User $username not found in pending_members.";
+        error_log("[ERROR] User $username not found in pending_members.");
+        return false;
     }
 
-    return false; // Return false if anything fails
+    // Insert into member table
+    $insertMemberSuccess = $dbProxy->executeQuery(
+        "INSERT INTO member (FullName, BirthDate, Gender, MobileNumber) VALUES (?, ?, ?, ?)",
+        [$user['FullName'], $user['BirthDate'], $user['Gender'], $user['MobileNumber']]
+    );
+    
+    // Now $insertMemberSuccess will be true if inserted successfully, false if it really failed.
+    if (!$insertMemberSuccess) {
+        error_log("[ERROR] Actual error inserting into `member` table: " . $this->conn->error);
+        return false;
+    }    
+
+    $memberId = $this->conn->insert_id;
+    $accountType = strtolower($user['account_type']);
+
+    // Insert into specific account type table
+    $specificQuery = $accountType === 'doctor' ? 
+        "INSERT INTO doctor (MemberID, Username, Email, Password, Specialty) VALUES (?, ?, ?, ?, ?)" : 
+        "INSERT INTO trainee (MemberID, Username, Email, Password, Specialty) VALUES (?, ?, ?, ?, ?)";
+
+    $insertSpecificSuccess = $dbProxy->executeQuery(
+        $specificQuery,
+        [$memberId, $user['username'], $user['email'], $user['password'], $user['Specialty']]
+    );
+
+    if (!$insertSpecificSuccess) {
+        $_SESSION['logs'][] = "Failed to insert $username into $accountType table.";
+        error_log("[ERROR] Failed to insert $username into $accountType table.");
+        return false;
+    
+    }
+
+    // Log approval in approve_account_member
+    $insertApproveSuccess = $dbProxy->executeQuery(
+        "INSERT INTO approve_account_member (admin_id) VALUES (?)",
+        [$_SESSION['admin_id']]
+    );
+
+    if (!$insertApproveSuccess) {
+        $_SESSION['logs'][] = "Failed to log approval for $username.";
+        error_log("[ERROR] Failed to log approval for $username.");
+        return false;
+    }
+
+    $approveId = $this->conn->insert_id;
+
+    // Log details in approve_account_member_detail
+    $detailDescription = "Approved account for user: $username";
+    $doctorId = ($accountType === 'doctor') ? $memberId : null;
+    $traineeId = ($accountType === 'trainee') ? $memberId : null;
+
+    $insertDetailSuccess = $dbProxy->executeQuery(
+        "INSERT INTO approve_account_member_detail (approve_id, doctor_id, trainee_id, detail_description) VALUES (?, ?, ?, ?)",
+        [$approveId, $doctorId, $traineeId, $detailDescription]
+    );
+
+    if (!$insertDetailSuccess) {
+        $_SESSION['logs'][] = "Failed to log approval details for $username.";
+        error_log("[ERROR] Failed to log approval details for $username.");
+        return false;
+    }
+
+    // Delete from pending_members
+    $deleteSuccess = $dbProxy->executeQuery("DELETE FROM pending_members WHERE username = ?", [$username]);
+
+    if (!$deleteSuccess) {
+        $_SESSION['logs'][] = "Failed to delete $username from pending_members.";
+        error_log("[ERROR] Failed to delete $username from pending_members.");
+        return false;
+    }
+
+    $_SESSION['logs'][] = "Successfully approved account for $username.";
+    error_log("[INFO] Successfully approved account for $username.");
+    return true;
 }
+
 
     public function getAdminId($username) {
         $query = "SELECT admin_id FROM admin WHERE username = ?";
