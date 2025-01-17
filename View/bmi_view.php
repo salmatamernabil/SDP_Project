@@ -1,3 +1,11 @@
+<?php
+
+if (isset($_SESSION['message'])) {
+  //  echo "<p style='color: red; text-align: center;'>{$_SESSION['message']}</p>";
+    unset($_SESSION['message']); // Clear the message after displaying it
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -146,16 +154,9 @@
         <div class="form-container">
             <h2>Add Patient BMI</h2>
 
-            <!-- Display message if exists -->
-            <?php
-            session_start();
-            if (isset($_SESSION['message'])) {
-                echo "<p style='color: red; text-align: center;'>{$_SESSION['message']}</p>";
-                unset($_SESSION['message']);
-            }
-            ?>
 
             <form action="../Controller/bmi_controller.php" method="POST">
+            <input type="hidden" name="patient_id" value="<?php echo htmlspecialchars($_POST['patient_id'] ?? ''); ?>">
                 <div class="form-group">
                     <input type="number" name="weight" id="weight" placeholder="Weight (kg)" step="0.1" oninput="updateBMI()" required>
                 </div>
