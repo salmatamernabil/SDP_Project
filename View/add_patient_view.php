@@ -142,7 +142,7 @@
 
     <!-- Navbar -->
     <div class="navbar">
-        <a href="admin_home.php" class="logo">Bravo</a>
+        <a href="admin_home_view.php" class="logo">Bravo</a>
     </div>
 
     <!-- Content Section -->
