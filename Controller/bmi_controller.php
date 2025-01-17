@@ -4,50 +4,37 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once '../Model/bmi_model.php';
+require_once '../Model/admin_model.php'; // Include AdminModel to get the current admin instance
+require_once '../Design Patterns/Decorater.php'; // Include AdminModel to get the current admin instance 
 
 class BMIController {
-    private $bmiModel;
+    private $adminComponent; // Use AdminComponent instead of BMIModel directly
 
     public function __construct() {
-        $this->bmiModel = new BMIModel();
+        // Get the current admin instance from the session
+        $adminModel = new AdminModel();
+        $this->adminComponent = $adminModel->getCurrentAdminInstance(); // Get the appropriate admin instance (BaseAdmin, SuperAdmin, or ChiefAdmin)
     }
 
     public function addBMI($weight, $height) {
-        // Validate inputs
-        if ($weight <= 0 || $height <= 0) {
-            $_SESSION['message'] = "Please enter valid weight and height.";
-            $_SESSION['weight'] = $weight;
-            $_SESSION['height'] = $height;
+        // Retrieve patient_id from the POST request
+        $patientId = $_POST['patient_id'] ?? null;
+
+        if (!$patientId) {
+            $_SESSION['message'] = "Patient ID is missing. Please select a patient.";
             header("Location: ../View/bmi_view.php");
             exit();
         }
-    
+
         // Calculate BMI
         $heightM = $height / 100;
         $bmiValue = $weight / ($heightM * $heightM);
         $bmiValue = round($bmiValue, 2);
-    
+
         // Determine BMI category
-        if ($bmiValue < 18.5) {
-            $result = 'Underweight';
-        } elseif ($bmiValue >= 18.5 && $bmiValue < 25) {
-            $result = 'Normal weight';
-        } elseif ($bmiValue >= 25 && $bmiValue < 30) {
-            $result = 'Overweight';
-        } else {
-            $result = 'Obese';
-        }
-    
-        // Prepare data for insertion
-        $patientId = $this->bmiModel->getLatestPatientId();
-        if ($patientId === null) {
-            $_SESSION['message'] = "No patient found. Please add a patient first.";
-            header("Location: ../View/comorbidity_view.php");
-            exit();
-        }
-    
-        // Prepare data with the patient_id included
+        $result = $this->determineBMICategory($bmiValue);
+
+        // Prepare BMI data
         $bmiData = [
             'patient_id' => $patientId,
             'weight' => $weight,
@@ -55,34 +42,40 @@ class BMIController {
             'bmi_value' => $bmiValue,
             'result' => $result
         ];
-        
-        // Retrieve the admin ID from the session
+
+        // Use the AdminComponent's addBMI method
         $adminId = $_SESSION['admin_id'] ?? null;
         if ($adminId === null) {
-            $_SESSION['message'] = "Admin ID is missing. Please sign in as an admin.";
+            $_SESSION['message'] = "Admin ID is missing. Please sign in.";
             header("Location: ../View/admin_login_view.php");
             exit();
         }
 
-        // Insert into database with the admin ID
-        $success = $this->bmiModel->insertBMI($bmiData, $adminId);
-    
+        $success = $this->adminComponent->addBMI($bmiData, $adminId);
+
         if ($success) {
             $_SESSION['message'] = "BMI data added successfully.";
-            $_SESSION['bmi_value'] = $bmiValue;
-            $_SESSION['result'] = $result;
-            $_SESSION['weight'] = $weight;
-            $_SESSION['height'] = $height;
-    
-            // Redirect to comorbidity_view.php upon success
-            header("Location: ../View/comorbidity_view.php");
+            header("Location: ../View/add_patient_details_view.php");
         } else {
             $_SESSION['message'] = "Failed to add BMI data.";
             header("Location: ../View/bmi_view.php");
         }
         exit();
     }
-    
+
+    // Function to determine BMI category
+    private function determineBMICategory($bmiValue) {
+        if ($bmiValue < 18.5) {
+            return 'Underweight';
+        } elseif ($bmiValue >= 18.5 && $bmiValue < 25) {
+            return 'Normal weight';
+        } elseif ($bmiValue >= 25 && $bmiValue < 30) {
+            return 'Overweight';
+        } else {
+            return 'Obese';
+        }
+    }
+
     // New function to handle AJAX requests for BMI calculation
     public function calculateBMI($weight, $height) {
         $heightM = $height / 100;
@@ -90,15 +83,7 @@ class BMIController {
         $bmiValue = round($bmiValue, 2);
 
         // Determine BMI category
-        if ($bmiValue < 18.5) {
-            $result = 'Underweight';
-        } elseif ($bmiValue >= 18.5 && $bmiValue < 25) {
-            $result = 'Normal weight';
-        } elseif ($bmiValue >= 25 && $bmiValue < 30) {
-            $result = 'Overweight';
-        } else {
-            $result = 'Obese';
-        }
+        $result = $this->determineBMICategory($bmiValue);
 
         // Return response as JSON
         echo json_encode(['bmi' => $bmiValue, 'category' => $result]);
